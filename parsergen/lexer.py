@@ -1,6 +1,6 @@
+"""Creates the Token class and regex matching Lexer"""
 from dataclasses import dataclass
 from typing import *
-from enum import Enum
 import re
 
 class Token(object):
@@ -22,16 +22,6 @@ class Token(object):
     @property
     def pos(self):
         return self.lineno, self.column
-
-symbols = { # single char symbols
-    
-}
-QUOTE_CHARS = ("'", "\"")
-keywords = {
-    
-}
-
-KEYWORDS = {**symbols, **keywords}
 
 @dataclass
 class LexerResult:

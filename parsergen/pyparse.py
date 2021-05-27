@@ -1,22 +1,23 @@
-"""
-Grammar for the grammar:
+"""Parses grammar expressions and performs pattern matching
+
 Tokens:
-    ID      :   [a-z]+
-    TOKEN   :   [A-Z]+
+    ID      :   [a-z_]+
+    TOKEN   :   [A-Z_]+
 
 
+Grammar:
 
 statement  :  ID COLON (expr)*
 expr       :  item
 expr       :  expr OR expr
 expr       :  expr STAR
 expr       :  expr PLUS
+expr       :  expr QMARK
 expr       :  LPAREN expr RPAREN
 
 item       :  ID | TOKEN
 """
-from pprint import pprint
-from lexer import *
+from .lexer import *
 from typing import *
 
 class AST(object):
@@ -61,8 +62,7 @@ class OneOrMore(Quantifier):
     pass
 
 class ZeroOrOne(Quantifier):
-    def __init__(self) -> None:
-        raise NotImplemented
+    pass
 
 class OrOp(Expr):
     def __init__(self, exprs: List[Expr]) -> None:
@@ -88,6 +88,7 @@ class GrammarLexer(Lexer):
         "OR":      r"\|",
         "STAR":    r"\*",
         "PLUS":    r"\+",
+        "QMARK":   r"\?",
         "LPAREN":  r"\(",
         "RPAREN":  r"\)",
         "NEWLINE": r"\n"
@@ -149,6 +150,9 @@ class GrammarParser(object):
         elif self.current_token.type == "PLUS":
             self.eat("PLUS")
             node = OneOrMore(node)
+        elif self.current_token.type == "QMARK":
+            self.eat("QMARK")
+            node = ZeroOrOne(node)
         return node
     
     def or_op(self, node) -> OrOp:
@@ -187,25 +191,6 @@ class GrammarParser(object):
 
         return self.statement() # curently only supports a single statement
 
-tests = """statement  :  ID COLON (expr)*
-expr       :  item
-expr       :  expr OR expr
-expr       :  expr STAR
-expr       :  expr PLUS
-expr       :  LPAREN expr RPAREN
-item       :  ID | TOKEN""".split("\n")
-
-#for t in tests:
-#    print(t)
-#    l = GrammarLexer()
-#    tokens = l.lexString(t).tokens
-#    p = GrammarParser()
-#    print(p.parse(tokens))
-
-@overload
-def grammar(statement: str):
-    pass
-
 class StatementAndTarget(NamedTuple):
     statement: Statement
     function: Any
@@ -232,9 +217,14 @@ class Parser:
     
     @property
     def current_token(self) -> Token:
-        return self.tokens[self.index]
-    
+        try:
+            return self.tokens[self.index]
+        except IndexError:
+            return Token("<EOF>", "__EOF__")
+
+
     def pattern_match(self, starting_point=None) -> List[Any]:
+        self.indent = 0
         if starting_point is not None:
             matched, result = self.process_StatementAndTargetList(self._grammar[starting_point])
             if matched:
@@ -248,18 +238,19 @@ class Parser:
 
     def process(self, ast: AST) -> Tuple[bool, Any]:
         target = f"process_{ast.__class__.__qualname__}"
-        #print(target, "  ", ast)
-        return getattr(self, target)(ast)
+        #print(self.indent * "|" + target, " ", ast)
+        self.indent += 1
+        r = getattr(self, target)(ast)
+        self.indent += -1
+        #print(self.indent * "|" + target, "RET ", ast, r)
+        return r
     
     def process_StatementAndTargetList(self, statements: List[StatementAndTarget]) -> Tuple[bool, Any]:
         for statement, func in statements:
             i = self.index
-            try:
-                matched, result = self.process(statement)
-                if matched:
-                    return True, func(self, result)
-            except IndexError:
-                pass
+            matched, result = self.process(statement)
+            if matched:
+                return True, func(self, result)
             self.index = i
         
         return False, None
@@ -278,16 +269,13 @@ class Parser:
     def process_ExprList(self, exprList: ExprList) -> Tuple[bool, List[Any]]:
         result = []
         i = self.index
-        try:
-            for expr in exprList.exprs:
-                matched, r = self.process(expr)
-                result.append(r)
-                if not matched:
-                    break
-            else:
-                return True, result
-        except IndexError:
-            pass
+        for expr in exprList.exprs:
+            matched, r = self.process(expr)
+            result.append(r)
+            if not matched:
+                break
+        else:
+            return True, result
         self.index = i
         return False, []
 
@@ -305,12 +293,16 @@ class Parser:
     def process_ZeroOrMore(self, quantifier: ZeroOrMore) -> Tuple[bool, Any]:
         result = []
         match = True
+        #print(self.indent * " " + "ZeroOrMore", quantifier)
         while match:
             #print("ZeroOrMore check for", quantifier.expr)
             match, r = self.process(quantifier.expr)
             #print("ZeroOrMore", match, r, self.current_token)
             if match:
                 result.append(r)
+            else:
+                break
+        #print(self.indent * " " + "ZeroOrMore", quantifier)
         return True, result
     
     def process_OneOrMore(self, quantifier: OneOrMore) -> Tuple[bool, Any]:
@@ -323,6 +315,11 @@ class Parser:
         if len(result) == 0:
             return False, result
         return True, result
+    
+    def process_ZeroOrOne(self, quantifier: ZeroOrOne) -> Tuple[bool, Any]:
+        r = None
+        _, r = self.process(quantifier.expr)
+        return True, r
     
     def process_OrOp(self, or_op: OrOp) -> Tuple[bool, Any]:
         for expr in or_op.exprs:

@@ -1,4 +1,5 @@
-from pyparse import *
+from parsergen import *
+from pprint import pprint
 
 class MyLexer(Lexer):
     tokens = {
@@ -18,7 +19,7 @@ class MyLexer(Lexer):
     ignore = " \t"
 
 """
-statement_list  :  statement*
+statement_list  :  (statement NEWLINE?)*
 statement       :  print | assign
 print           :  PRINT LPAREN expr RPAREN
 assign          :  SET ID TO expr
@@ -35,9 +36,8 @@ class MyParser(Parser):
 
     @Parser.grammar("statement_list  :  (statement NEWLINE*)*")
     def statement_list(self, p):
-        print(p)
-        return p
-        #return "\n".join(p[0][0])
+        #print(p)
+        return "\n".join([e[0] for e in p[0]])
     
     @Parser.grammar("statement       :  print | assign")
     def statement(self, p):
@@ -57,20 +57,23 @@ class MyParser(Parser):
     
     @Parser.grammar("term_two : term (ADD | SUB term)*")
     def expr(self, p):
-        r = f"({p[0]}"
+        r = p[0]
         convert = {"ADD": "+", "SUB": "-"}
         for op, num in p[1]:
             r += f" {convert[op]} {num}"
-        r += ")"
+        if len(p[1]) > 0:
+            r = f"({r})"
         return r
     
     @Parser.grammar("term : factor (MUL | DIV factor)*")
     def expr(self, p):
-        r = f"({p[0]}"
+        r = p[0]
         convert = {"MUL": "*", "DIV": "/"}
+        # only add brackets if there are operators??
         for op, num in p[1]:
             r += f" {convert[op]} {num}"
-        r += ")"
+        if len(p[1]) > 0:
+            r = f"({r})"
         return r
     
     @Parser.grammar("factor  :  INT")
@@ -86,9 +89,10 @@ p = MyParser()
 
 #pprint(p._grammar)
 print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)").tokens))
-print(p.parse(l.lexString("2 ADD 2").tokens))
+#print(p.parse(l.lexString("2 ADD 2").tokens))
 print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4").tokens))
 
-pprint(l.lexString("""SET a TO 2 ADD 3 MUL 4\nPRINT(1)""").tokens)
-print(p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 5""").tokens, starting_point="statement_list"))
+#pprint(l.lexString("""SET a TO 2 ADD 3 MUL 4\nPRINT(1)""").tokens)
+r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 5""").tokens, starting_point="statement_list")
+print(r)
 # statement_list is broken

@@ -1,4 +1,5 @@
-from pyparse import *
+from parsergen import *
+from pprint import pprint
 
 class MyLexer(Lexer):
     tokens = {

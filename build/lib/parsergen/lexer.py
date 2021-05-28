@@ -60,17 +60,12 @@ class Lexer(metaclass=RequiredAttributes("tokens", "ignore")):
             #self.step_source(1)
         
         for token_name, regex in self.tokens.items():
-            modifier = None
-            if isinstance(regex, tuple):
-                regex, modifier = regex
             r = re.match(regex, self.source)
             if r:
                 self.step_source(r.span()[1])
-                rv = self.Token(r.group(), token_name)
-                if modifier:
-                    rv.value = modifier(rv.value)
-                return rv
+                return self.Token(r.group(), token_name)
         raise Exception(f"Found Unexpected character '{self.source[0]}' while tokenizing!")
+        
         
 
     def lexString(self, source):

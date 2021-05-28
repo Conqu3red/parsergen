@@ -1,8 +1,8 @@
 """Parses grammar expressions and performs pattern matching
 
 Tokens:
-    ID      :   [a-z0-9_]+
-    TOKEN   :   [A-Z0-9_]+
+    ID      :   [a-z_]+
+    TOKEN   :   [A-Z_]+
 
 
 Grammar:
@@ -95,8 +95,8 @@ class Statement(object):
 
 class GrammarLexer(Lexer):
     tokens = {
-        "ID":      r"[a-z0-9_]+",
-        "TOKEN":   r"[A-Z0-9_]+",
+        "ID":      r"[a-z_]+",
+        "TOKEN":   r"[A-Z_]+",
         "COLON":   r":",
         "OR":      r"\|",
         "STAR":    r"\*",
@@ -209,6 +209,24 @@ class GrammarParser(object):
 class StatementAndTarget(NamedTuple):
     statement: Statement
     function: Any
+
+
+def get_class_that_defined_method(meth):
+    "https://stackoverflow.com/a/25959545"
+    if isinstance(meth, functools.partial):
+        return get_class_that_defined_method(meth.func)
+    if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
+        for cls in inspect.getmro(meth.__self__.__class__):
+            if meth.__name__ in cls.__dict__:
+                return cls
+        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+    if inspect.isfunction(meth):
+        cls = getattr(inspect.getmodule(meth),
+                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                      None)
+        if isinstance(cls, type):
+            return cls
+    return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
 
 def grammar(statement):

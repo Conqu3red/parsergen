@@ -69,7 +69,6 @@ class MyParser(Parser):
     def t(self, p):
         r = p[0]
         convert = {"MUL": "*", "DIV": "/"}
-        # only add brackets if there are operators??
         for op, num in p[1]:
             r += f" {convert[op]} {num}"
         if len(p[1]) > 0:
@@ -82,7 +81,7 @@ class MyParser(Parser):
     
     @grammar("factor  :  LPAREN expr RPAREN")
     def factor2(self, p):
-        return p[1]
+        return "(" + p[1] + ")"
 
 l = MyLexer()
 p = MyParser()
@@ -90,7 +89,7 @@ p = MyParser()
 print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)").tokens))
 print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4").tokens))
 
-r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 5""").tokens)
+r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3""").tokens)
 print(r)
 
 print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*"))

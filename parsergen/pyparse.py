@@ -18,7 +18,11 @@ expr       :  LPAREN expr RPAREN
 item       :  ID | TOKEN
 """
 from .lexer import *
+from .utils import *
 from typing import *
+import inspect
+import functools
+
 
 class AST(object):
     pass
@@ -35,11 +39,14 @@ class Pointer(AST):
 class StatementPointer(Pointer):
     pass
 
+
 class TokenPointer(Pointer):
     pass
 
+
 class Expr(AST):
     pass
+
 
 class ExprList(AST):
     def __init__(self, exprs) -> None:
@@ -48,6 +55,7 @@ class ExprList(AST):
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(exprs={self.exprs!r})"
 
+
 class Quantifier(Expr):
     def __init__(self, expr: Expr) -> None:
         self.expr = expr
@@ -55,14 +63,18 @@ class Quantifier(Expr):
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(expr={self.expr!r})"
 
+
 class ZeroOrMore(Quantifier):
     pass
+
 
 class OneOrMore(Quantifier):
     pass
 
+
 class ZeroOrOne(Quantifier):
     pass
+
 
 class OrOp(Expr):
     def __init__(self, exprs: List[Expr]) -> None:
@@ -70,6 +82,7 @@ class OrOp(Expr):
     
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(exprs={self.exprs!r})"
+
 
 class Statement(object):
     def __init__(self, name: str, grammar: List[Expr]) -> None:
@@ -94,6 +107,7 @@ class GrammarLexer(Lexer):
         "NEWLINE": r"\n"
     }
     ignore = " \t"
+
 
 class GrammarParser(object):
     def __init__(self) -> None:
@@ -191,29 +205,56 @@ class GrammarParser(object):
 
         return self.statement() # curently only supports a single statement
 
+
 class StatementAndTarget(NamedTuple):
     statement: Statement
     function: Any
 
-class Parser:
-    _grammar: Dict[str, List[StatementAndTarget]] = {}
 
-    def grammar(statement):
-        #print(f"grammar {statement}")
-        l = GrammarLexer()
-        tokens = l.lexString(statement).tokens
-        r = GrammarParser().parse(tokens)
-        
-        
-        def inner(func):
-            if r.name not in Parser._grammar:
-                Parser._grammar[r.name] = [StatementAndTarget(statement=r, function=func)]
+def get_class_that_defined_method(meth):
+    "https://stackoverflow.com/a/25959545"
+    if isinstance(meth, functools.partial):
+        return get_class_that_defined_method(meth.func)
+    if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
+        for cls in inspect.getmro(meth.__self__.__class__):
+            if meth.__name__ in cls.__dict__:
+                return cls
+        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+    if inspect.isfunction(meth):
+        cls = getattr(inspect.getmodule(meth),
+                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                      None)
+        if isinstance(cls, type):
+            return cls
+    return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+
+
+def grammar(statement):
+    class _grammar_creator:
+        def __init__(self, fn):
+            self.fn = fn
+
+        def __set_name__(self, owner: Parser, name):
+            l = GrammarLexer()
+            tokens = l.lexString(statement).tokens
+            r = GrammarParser().parse(tokens)
+
+            if getattr(owner, "_grammar", None) is None:
+                owner._grammar = {}
+
+            if r.name not in owner._grammar:
+                owner._grammar[r.name] = [StatementAndTarget(statement=r, function=self.fn)]
             else:
-                Parser._grammar[r.name].append(StatementAndTarget(statement=r, function=func))
-            
-            return func
-        
-        return inner
+                owner._grammar[r.name].append(StatementAndTarget(statement=r, function=self.fn))
+
+            setattr(owner, name, self.fn)
+    
+    return _grammar_creator
+
+
+class Parser(metaclass=RequiredAttributes("tokens")):
+    _grammar: Dict[str, List[StatementAndTarget]]
+    tokens = None
     
     @property
     def current_token(self) -> Token:
@@ -293,16 +334,12 @@ class Parser:
     def process_ZeroOrMore(self, quantifier: ZeroOrMore) -> Tuple[bool, Any]:
         result = []
         match = True
-        #print(self.indent * " " + "ZeroOrMore", quantifier)
         while match:
-            #print("ZeroOrMore check for", quantifier.expr)
             match, r = self.process(quantifier.expr)
-            #print("ZeroOrMore", match, r, self.current_token)
             if match:
                 result.append(r)
             else:
                 break
-        #print(self.indent * " " + "ZeroOrMore", quantifier)
         return True, result
     
     def process_OneOrMore(self, quantifier: OneOrMore) -> Tuple[bool, Any]:
@@ -317,7 +354,6 @@ class Parser:
         return True, result
     
     def process_ZeroOrOne(self, quantifier: ZeroOrOne) -> Tuple[bool, Any]:
-        r = None
         _, r = self.process(quantifier.expr)
         return True, r
     
@@ -331,4 +367,59 @@ class Parser:
     def parse(self, tokens: List[Token], starting_point=None):
         self.tokens = tokens
         self.index = 0
+        if starting_point is None:
+            starting_point = getattr(self, "starting_point", None)
+
         return self.pattern_match(starting_point=starting_point)
+    
+
+    def get_result_structure(self, statement: str) -> str:
+        """Function to show the strucutre of data returned from a given grammar rule"""
+        l = GrammarLexer()
+        tokens = l.lexString(statement).tokens
+        r = GrammarParser().parse(tokens)
+
+        return self.rs(r)
+    
+    def rs(self, ast) -> str:
+        target = f"rs_{ast.__class__.__qualname__}"
+        r = getattr(self, target)(ast)
+        return r
+    
+    def rs_Statement(self, statement: Statement) -> str:
+        rv = "[ "
+        for part in statement.grammar:
+            rv += self.rs(part) + ", "
+        rv += "]"
+        return rv
+    
+    def rs_ExprList(self, exprList: ExprList) -> str:
+        rv = "[ "
+        for expr in exprList.exprs:
+            rv += self.rs(expr) + ", "
+        rv += "]"
+        return rv
+
+    def rs_TokenPointer(self, pointer: TokenPointer) -> str:
+        return f"'{pointer.target}'"
+    
+    def rs_StatementPointer(self, pointer: StatementPointer) -> str:
+        return f"<{pointer.target}>"
+    
+    def rs_ZeroOrMore(self, quantifier: ZeroOrMore) -> str:
+        return f"[ {self.rs(quantifier.expr)} *... ]"
+    
+    def rs_OneOrMore(self, quantifier: OneOrMore) -> str:
+        return f"[ OneOrMore {self.rs(quantifier.expr)} +.. ]"
+    
+    def rs_ZeroOrOne(self, quantifier: ZeroOrOne) -> str:
+        return f"({self.rs(quantifier.expr)} or None)"
+    
+    def rs_OrOp(self, or_op: OrOp) -> str:
+        rv = "( "
+        for expr in or_op.exprs:
+            rv += self.rs(expr) + " | "
+        return rv[:-2] + " )"
+
+
+del Parser.tokens

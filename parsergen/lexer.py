@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import *
 import re
+from .utils import *
 
 class Token(object):
     def __init__(self, value, _type, lineno=0, column=0):
@@ -28,10 +29,10 @@ class LexerResult:
     tokens: List[Token]
     lines: List[str]
 
-class Lexer(object):
+class Lexer(metaclass=RequiredAttributes("tokens", "ignore")):
+    tokens = ignore = None
     def __init__(self):
         self.token_list: List[Token] = []
-        self.ignore = " \t"
 
         self.init()
     
@@ -78,3 +79,6 @@ class Lexer(object):
             token = self.getToken()
             self.token_list.append(token)
         return LexerResult(self.token_list, self.lines)
+
+
+del Lexer.tokens, Lexer.ignore

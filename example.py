@@ -33,30 +33,30 @@ factor          :  LPAREN expr RPAREN
 class MyParser(Parser):
 
     tokens = MyLexer.tokens
+    starting_point = "statement_list"
 
-    @Parser.grammar("statement_list  :  (statement NEWLINE*)*")
+    @grammar("statement_list  :  (statement NEWLINE*)*")
     def statement_list(self, p):
-        #print(p)
         return "\n".join([e[0] for e in p[0]])
     
-    @Parser.grammar("statement       :  print | assign")
+    @grammar("statement  :  print | assign")
     def statement(self, p):
         return p[0]
 
-    @Parser.grammar("print  : PRINT LPAREN expr RPAREN")
+    @grammar("print  : PRINT LPAREN expr RPAREN")
     def print_statement(self, p):
         return f"print({p[2]})"
     
-    @Parser.grammar("assign  :  SET ID TO expr")
+    @grammar("assign  :  SET ID TO expr")
     def assign(self, p):
         return f"{p[1]} = {p[3]}"
     
-    @Parser.grammar("expr  :  term_two")
+    @grammar("expr  :  term_two")
     def expr(self, p):
         return p[0]
     
-    @Parser.grammar("term_two : term (ADD | SUB term)*")
-    def expr(self, p):
+    @grammar("term_two  :  term (ADD | SUB term)*")
+    def t2(self, p):
         r = p[0]
         convert = {"ADD": "+", "SUB": "-"}
         for op, num in p[1]:
@@ -65,8 +65,8 @@ class MyParser(Parser):
             r = f"({r})"
         return r
     
-    @Parser.grammar("term : factor (MUL | DIV factor)*")
-    def expr(self, p):
+    @grammar("term  :  factor (MUL | DIV factor)*")
+    def t(self, p):
         r = p[0]
         convert = {"MUL": "*", "DIV": "/"}
         # only add brackets if there are operators??
@@ -76,23 +76,21 @@ class MyParser(Parser):
             r = f"({r})"
         return r
     
-    @Parser.grammar("factor  :  INT")
+    @grammar("factor  :  INT")
     def factor(self, p):
         return p[0]
     
-    @Parser.grammar("factor  :  LPAREN expr RPAREN")
-    def factor(self, p):
+    @grammar("factor  :  LPAREN expr RPAREN")
+    def factor2(self, p):
         return p[1]
 
 l = MyLexer()
 p = MyParser()
 
-#pprint(p._grammar)
 print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)").tokens))
-#print(p.parse(l.lexString("2 ADD 2").tokens))
 print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4").tokens))
 
-#pprint(l.lexString("""SET a TO 2 ADD 3 MUL 4\nPRINT(1)""").tokens)
-r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 5""").tokens, starting_point="statement_list")
+r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 5""").tokens)
 print(r)
-# statement_list is broken
+
+print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*"))

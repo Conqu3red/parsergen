@@ -2,24 +2,24 @@ from parsergen import *
 from pprint import pprint
 
 class MyLexer(Lexer):
-    def newline(self, v):
-        self.lineno += 1
+    @token(r"\n+")
+    def NEWLINE(self, v):
+        self.lineno += len(v.value)
         self.column = 0
         return v
-    tokens = {
-        "PRINT":   r"PRINT",
-        "INT":     r"[0-9]+",
-        "ADD":     r"ADD",
-        "SUB":     r"SUB",
-        "MUL":     r"MUL",
-        "DIV":     r"DIV",
-        "SET":     r"SET",
-        "TO":      r"TO",
-        "ID":      r"[A-Za-z_]+",
-        "LPAREN":  r"\(",
-        "RPAREN":  r"\)",
-        "NEWLINE": (r"\n", newline),
-    }
+    
+    PRINT  =  r"PRINT"
+    INT    =  r"[0-9]+"
+    ADD    =  r"ADD"
+    SUB    =  r"SUB"
+    MUL    =  r"MUL"
+    DIV    =  r"DIV"
+    SET    =  r"SET"
+    TO     =  r"TO"
+    ID     =  r"[A-Za-z_]+"
+    LPAREN =  r"\("
+    RPAREN =  r"\)"
+    
     ignore = " \t"
 
 """
@@ -90,13 +90,13 @@ class MyParser(Parser):
 l = MyLexer()
 p = MyParser()
 
-print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)")))
-print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4")))
+print(p.parse(l.lex_string("PRINT(1 ADD 2 ADD 3)")))
+print(p.parse(l.lex_string("SET a TO 2 ADD 3 MUL 4")))
 
-t = l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3""")
+t = l.lex_string("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3""")
 pprint(t.tokens)
 pprint(t.lines)
-r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3"""))
+r = p.parse(l.lex_string("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3"""))
 print(r)
 
 print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*"))

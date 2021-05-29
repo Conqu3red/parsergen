@@ -7,7 +7,7 @@ Tokens:
 
 Grammar:
 
-statement  :  ID COLON (expr)*
+statement  :  (ID COLON)? (expr)*
 expr       :  item
 expr       :  expr OR expr
 expr       :  expr STAR
@@ -92,18 +92,17 @@ class Statement(object):
 
 
 class GrammarLexer(Lexer):
-    tokens = {
-        "ID":      r"[a-z0-9_]+",
-        "TOKEN":   r"[A-Z0-9_]+",
-        "COLON":   r":",
-        "OR":      r"\|",
-        "STAR":    r"\*",
-        "PLUS":    r"\+",
-        "QMARK":   r"\?",
-        "LPAREN":  r"\(",
-        "RPAREN":  r"\)",
-        "NEWLINE": r"\n"
-    }
+    ID =      r"[a-z0-9_]+"
+    TOKEN =   r"[A-Z0-9_]+"
+    COLON =   r"\:"
+    OR =      r"\|"
+    STAR =    r"\*"
+    PLUS =    r"\+"
+    QMARK =   r"\?"
+    LPAREN =  r"\("
+    RPAREN =  r"\)"
+    NEWLINE = r"\n"
+    
     ignore = " \t"
 
 
@@ -126,14 +125,22 @@ class GrammarParser(object):
         if len(self.tokens) > 0:
             return self.tokens[0]
         return self.eof()
+    
+    @property
+    def next_token(self):
+        if len(self.tokens) > 1:
+            return self.tokens[1]
+        return self.eof()
 
     def statement(self) -> Statement:
-        "ID COLON (expr)*"
+        "(ID COLON)? (expr)*"
         token = self.current_token
-        self.eat("ID")
-        name = token.value
+        name = "_"
+        if self.current_token.type == "ID" and self.next_token.type == "COLON":
+            self.eat("ID")
+            name = token.value
+            self.eat("COLON")
         expr = []
-        self.eat("COLON")
         while len(self.tokens) > 0 and self.current_token.type != "NEWLINE":
             expr.append(self.expr())
         
@@ -213,28 +220,17 @@ class StatementAndTarget(NamedTuple):
 def grammar(statement: str):
     """decorator for declaring grammar rules/statements"""
     
-    class _grammar_creator:
-        def __init__(self, fn):
-            self.fn = fn
+    def inner(func):
+        l = GrammarLexer()
+        tokens = l.lex_string(statement).tokens
+        r = GrammarParser().parse(tokens)
+        if r.name == "_":
+            r.name = func.__name__
+        func._rule = r
 
-        def __set_name__(self, owner: Parser, name):
-            # NOTE: currently doesn't allow 2 functions with identical names
-            #print(self.fn.__name__)
-            l = GrammarLexer()
-            tokens = l.lexString(statement).tokens
-            r = GrammarParser().parse(tokens)
-
-            if getattr(owner, "_grammar", None) is None:
-                owner._grammar = {}
-
-            if r.name not in owner._grammar:
-                owner._grammar[r.name] = [StatementAndTarget(statement=r, function=self.fn)]
-            else:
-                owner._grammar[r.name].append(StatementAndTarget(statement=r, function=self.fn))
-
-            setattr(owner, name, self.fn)
+        return func
     
-    return _grammar_creator
+    return inner
 
 class ParseError(Exception):
     def __init__(self, msg, lineno, column, lineText=""):
@@ -250,13 +246,32 @@ class ParseError(Exception):
         return ret + f"{self.msg}"
 
 
-class Parser(metaclass=RequiredAttributes("tokens")):
+class ParserMetaDict(dict):
+    """Special dictionary to allow definition of the same function name multiple times in the Parser"""
+    def __setitem__(self, k, v) -> None:
+        if hasattr(v, "_rule") and k != "_grammar":
+            r = v._rule
+            if r.name not in self["_grammar"]:
+                self["_grammar"][r.name] = [StatementAndTarget(statement=r, function=v)]
+            else:
+                self["_grammar"][r.name].append(StatementAndTarget(statement=r, function=v))
+            return
+        return super().__setitem__(k, v)
+
+
+class ParserMeta(RequiredAttributes("tokens")):
+    @classmethod
+    def __prepare__(meta, name, bases):
+        d = ParserMetaDict()
+        d["grammar"] = grammar
+        d["_grammar"] = {}
+        return d
+
+class Parser(metaclass=ParserMeta):
     """Pattern matching Parser for grammar rules"""
     _grammar: Dict[str, List[StatementAndTarget]]
     tokens = None
     
-    def __init_subclass__(cls) -> None:
-        pass
 
     @property
     def current_token(self) -> Token:
@@ -413,7 +428,7 @@ class Parser(metaclass=RequiredAttributes("tokens")):
         
         """
         l = GrammarLexer()
-        tokens = l.lexString(statement).tokens
+        tokens = l.lex_string(statement).tokens
         r = GrammarParser().parse(tokens)
 
         return cls.rs(r)

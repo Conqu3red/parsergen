@@ -2,6 +2,10 @@ from parsergen import *
 from pprint import pprint
 
 class MyLexer(Lexer):
+    def newline(self, v):
+        self.lineno += 1
+        self.column = 0
+        return v
     tokens = {
         "PRINT":   r"PRINT",
         "INT":     r"[0-9]+",
@@ -14,12 +18,12 @@ class MyLexer(Lexer):
         "ID":      r"[A-Za-z_]+",
         "LPAREN":  r"\(",
         "RPAREN":  r"\)",
-        "NEWLINE": r"\n",
+        "NEWLINE": (r"\n", newline),
     }
     ignore = " \t"
 
 """
-statement_list  :  (statement NEWLINE?)*
+statement_list  :  (statement NEWLINE*)*
 statement       :  print | assign
 print           :  PRINT LPAREN expr RPAREN
 assign          :  SET ID TO expr
@@ -86,10 +90,13 @@ class MyParser(Parser):
 l = MyLexer()
 p = MyParser()
 
-print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)").tokens))
-print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4").tokens))
+print(p.parse(l.lexString("PRINT(1 ADD 2 ADD 3)")))
+print(p.parse(l.lexString("SET a TO 2 ADD 3 MUL 4")))
 
-r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3""").tokens)
+t = l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3""")
+pprint(t.tokens)
+pprint(t.lines)
+r = p.parse(l.lexString("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3"""))
 print(r)
 
 print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*"))

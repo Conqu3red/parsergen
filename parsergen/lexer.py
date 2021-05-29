@@ -31,16 +31,29 @@ class LexerResult:
 
 class Lexer(metaclass=RequiredAttributes("tokens", "ignore")):
     tokens = ignore = None
+    _lineno: int
+    
     def __init__(self):
         self.token_list: List[Token] = []
-
         self.init()
     
     def init(self):
+        self.current_line = ""
+        self._lineno = 1
         self.lineno = 1
         self.column = 0
-        self.curPos = 0
         self.token_list = []
+    
+    @property
+    def lineno(self) -> int:
+        return self._lineno
+    
+    @lineno.setter
+    def lineno(self, value):
+        if self._lineno < value:
+            self.lines.append(self.current_line)
+            self.current_line = ""
+        self._lineno = value
     
     def Token(self, value, tokenType):
         token = Token(
@@ -51,14 +64,10 @@ class Lexer(metaclass=RequiredAttributes("tokens", "ignore")):
     
     def step_source(self, to_index):
         self.column += to_index
+        self.current_line += self.source[:to_index]
         self.source = self.source[to_index:]
     
-    def getToken(self):
-        if self.source[0] == "\n":
-            self.lineno += 1
-            self.column = 0
-            #self.step_source(1)
-        
+    def getToken(self) -> Token:
         for token_name, regex in self.tokens.items():
             modifier = None
             if isinstance(regex, tuple):
@@ -68,21 +77,25 @@ class Lexer(metaclass=RequiredAttributes("tokens", "ignore")):
                 self.step_source(r.span()[1])
                 rv = self.Token(r.group(), token_name)
                 if modifier:
-                    rv.value = modifier(rv.value)
+                    rv.value = modifier(self, rv.value)
                 return rv
         raise Exception(f"Found Unexpected character '{self.source[0]}' while tokenizing!")
         
 
-    def lexString(self, source):
+    def lexString(self, source: str) -> LexerResult:
         self.init()
         self.source = source
-        self.lines = source.split("\n")
+        self.lines = []
+        
         while len(self.source) > 0:
-            #print(repr(self.source))
-            while self.source[0] in self.ignore:
+            while len(self.source) > 0 and self.source[0] in self.ignore:
                 self.step_source(1)
+            if len(self.source) == 0:
+                break
             token = self.getToken()
             self.token_list.append(token)
+        
+        self.lines.append(self.current_line) # final line
         return LexerResult(self.token_list, self.lines)
 
 

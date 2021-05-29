@@ -20,8 +20,6 @@ item       :  ID | TOKEN
 from .lexer import *
 from .utils import *
 from typing import *
-import inspect
-import functools
 
 
 class AST(object):
@@ -110,6 +108,7 @@ class GrammarLexer(Lexer):
 
 
 class GrammarParser(object):
+    """Parses grammar expressions/rules into and AST"""
     def __init__(self) -> None:
         pass
 
@@ -211,12 +210,16 @@ class StatementAndTarget(NamedTuple):
     function: Any
 
 
-def grammar(statement):
+def grammar(statement: str):
+    """decorator for declaring grammar rules/statements"""
+    
     class _grammar_creator:
         def __init__(self, fn):
             self.fn = fn
 
         def __set_name__(self, owner: Parser, name):
+            # NOTE: currently doesn't allow 2 functions with identical names
+            #print(self.fn.__name__)
             l = GrammarLexer()
             tokens = l.lexString(statement).tokens
             r = GrammarParser().parse(tokens)
@@ -233,11 +236,28 @@ def grammar(statement):
     
     return _grammar_creator
 
+class ParseError(Exception):
+    def __init__(self, msg, lineno, column, lineText=""):
+        self.msg = msg
+        self.lineno = lineno
+        self.column = column
+        self.lineText = lineText
+    
+    def __str__(self):
+        ret = f"\n  Line {self.lineno}:\n"
+        if self.lineText:
+            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
+        return ret + f"{self.msg}"
+
 
 class Parser(metaclass=RequiredAttributes("tokens")):
+    """Pattern matching Parser for grammar rules"""
     _grammar: Dict[str, List[StatementAndTarget]]
     tokens = None
     
+    def __init_subclass__(cls) -> None:
+        pass
+
     @property
     def current_token(self) -> Token:
         try:
@@ -346,61 +366,105 @@ class Parser(metaclass=RequiredAttributes("tokens")):
                 return True, result
         return False, None
     
-    def parse(self, tokens: List[Token], starting_point=None):
+    @overload
+    def parse(self, obj: LexerResult, starting_point=None) -> List:
+        ...
+    
+    @overload
+    def parse(self, obj: List[Token], starting_point=None) -> List:
+        ...
+    
+    def parse(self, obj, starting_point=None) -> List:
+        if isinstance(obj, LexerResult):
+            tokens = obj.tokens
+            lines = obj.lines
+        else:
+            tokens = obj
+            lines = []
         self.tokens = tokens
+        self.lines = lines
         self.index = 0
         if starting_point is None:
             starting_point = getattr(self, "starting_point", None)
 
-        return self.pattern_match(starting_point=starting_point)
-    
+        rv = self.pattern_match(starting_point=starting_point)
+        if self.current_token.type != "__EOF__":
+            if self.lines:
+                raise ParseError(
+                    f"Unexpected token {self.current_token.error_format()}", 
+                    *self.current_token.pos,
+                    lineText=self.lines[self.current_token.lineno-1]
+                )
+            raise ParseError(
+                f"Unexpected token {self.current_token.error_format()}", 
+                *self.current_token.pos
+            )
+        
+        return rv
 
-    def get_result_structure(self, statement: str) -> str:
-        """Function to show the strucutre of data returned from a given grammar rule"""
+    @classmethod
+    def get_result_structure(cls, statement: str) -> str:
+        """Function to show the strucutre of data returned from a given grammar rule
+        
+        Example
+        -------
+        >>> Parser.get_result_structure("statement_list  :  (statement NEWLINE* )*")
+        "[ [ [ <statement>, [ 'NEWLINE' *... ], ] *... ], ]"
+        
+        """
         l = GrammarLexer()
         tokens = l.lexString(statement).tokens
         r = GrammarParser().parse(tokens)
 
-        return self.rs(r)
+        return cls.rs(r)
     
-    def rs(self, ast) -> str:
+    @classmethod
+    def rs(cls, ast) -> str:
         target = f"rs_{ast.__class__.__qualname__}"
-        r = getattr(self, target)(ast)
+        r = getattr(cls, target)(ast)
         return r
     
-    def rs_Statement(self, statement: Statement) -> str:
+    @classmethod
+    def rs_Statement(cls, statement: Statement) -> str:
         rv = "[ "
         for part in statement.grammar:
-            rv += self.rs(part) + ", "
+            rv += cls.rs(part) + ", "
         rv += "]"
         return rv
     
-    def rs_ExprList(self, exprList: ExprList) -> str:
+    @classmethod
+    def rs_ExprList(cls, exprList: ExprList) -> str:
         rv = "[ "
         for expr in exprList.exprs:
-            rv += self.rs(expr) + ", "
+            rv += cls.rs(expr) + ", "
         rv += "]"
         return rv
-
-    def rs_TokenPointer(self, pointer: TokenPointer) -> str:
+    
+    @classmethod
+    def rs_TokenPointer(cls, pointer: TokenPointer) -> str:
         return f"'{pointer.target}'"
     
-    def rs_StatementPointer(self, pointer: StatementPointer) -> str:
+    @classmethod
+    def rs_StatementPointer(cls, pointer: StatementPointer) -> str:
         return f"<{pointer.target}>"
     
-    def rs_ZeroOrMore(self, quantifier: ZeroOrMore) -> str:
-        return f"[ {self.rs(quantifier.expr)} *... ]"
+    @classmethod
+    def rs_ZeroOrMore(cls, quantifier: ZeroOrMore) -> str:
+        return f"[ {cls.rs(quantifier.expr)} *... ]"
     
-    def rs_OneOrMore(self, quantifier: OneOrMore) -> str:
-        return f"[ OneOrMore {self.rs(quantifier.expr)} +.. ]"
+    @classmethod
+    def rs_OneOrMore(cls, quantifier: OneOrMore) -> str:
+        return f"[ OneOrMore {cls.rs(quantifier.expr)} +.. ]"
     
-    def rs_ZeroOrOne(self, quantifier: ZeroOrOne) -> str:
-        return f"({self.rs(quantifier.expr)} or None)"
+    @classmethod
+    def rs_ZeroOrOne(cls, quantifier: ZeroOrOne) -> str:
+        return f"({cls.rs(quantifier.expr)} or None)"
     
-    def rs_OrOp(self, or_op: OrOp) -> str:
+    @classmethod
+    def rs_OrOp(cls, or_op: OrOp) -> str:
         rv = "( "
         for expr in or_op.exprs:
-            rv += self.rs(expr) + " | "
+            rv += cls.rs(expr) + " | "
         return rv[:-2] + " )"
 
 

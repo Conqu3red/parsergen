@@ -3,7 +3,7 @@ from pprint import pprint
 
 class MyLexer(Lexer):
     tokens = {
-        "INT":     (r"[0-9]+", int),
+        "INT":     (r"[0-9]+", lambda _, x: int(x)),
         "ADD":     r"\+",
         "SUB":     r"\-",
         "POW":     r"\*\*",
@@ -86,7 +86,7 @@ class MyParser(Parser):
             raise Exception(f"variable '{p[0]}' is not defined.")
 
     @grammar("factor  :  LPAREN expr RPAREN")
-    def lparen_factor(self, p):
+    def bracket_factor(self, p):
         return p[1]
 
 l = MyLexer()
@@ -94,4 +94,5 @@ p = MyParser()
 
 while True:
     s = input("> ")
-    p.parse(l.lexString(s).tokens)
+    l_result = l.lexString(s)
+    p.parse(l.lexString(s))

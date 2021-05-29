@@ -1,7 +1,7 @@
 from parsergen import *
 from pprint import pprint
 
-class MyLexer(Lexer):
+class CalcLexer(Lexer):
     tokens = {
         "INT":     (r"[0-9]+", lambda _, x: int(x)),
         "ADD":     r"\+",
@@ -28,9 +28,9 @@ factor          :  INT | ID
 factor          :  LPAREN expr RPAREN
 """
 
-class MyParser(Parser):
+class CalcParser(Parser):
 
-    tokens = MyLexer.tokens
+    tokens = CalcLexer.tokens
     starting_point = "statement"
 
     def __init__(self):
@@ -89,8 +89,8 @@ class MyParser(Parser):
     def bracket_factor(self, p):
         return p[1]
 
-l = MyLexer()
-p = MyParser()
+l = CalcLexer()
+p = CalcParser()
 
 while True:
     s = input("> ")

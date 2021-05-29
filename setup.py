@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="parsergen",
-    version="1.0.0b1",
+    version="1.0.0",
     author="Conqu3red",
     description="Python library for building Parsers and Lexers Easily",
     long_description=long_description,

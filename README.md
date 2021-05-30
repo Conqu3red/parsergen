@@ -185,5 +185,12 @@ def expr(self, p):
     return p[0]
 ```
 
+# Printing the grammar for your parser
+It is sometimes helpful to see the entire grammar for you parser. This can be done as shown below:
+```python
+from parsergen import get_grammar
+print(get_grammar(CalcParser))
+```
+
 
 See `example_calc.py` and `example.py` for more examples, or look at the source code.

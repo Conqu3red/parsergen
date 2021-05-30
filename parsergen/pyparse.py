@@ -490,3 +490,69 @@ class Parser(metaclass=ParserMeta):
 
 
 del Parser.tokens
+
+class GrammarPrinter:
+    def __init__(self, parser: Parser) -> None:
+        self.parser = parser
+    
+    def process(self, ast):
+        target = f"process_{ast.__class__.__qualname__}"
+        r = getattr(self, target)(ast)
+        return r
+
+    def process_StatementAndTarget(self, ast: StatementAndTarget) -> str:
+        return self.process(ast.statement)
+    
+    def process_Statement(self, statement: Statement) -> str:
+        rv = ""
+        for c, part in enumerate(statement.grammar):
+            if c != 0:
+                rv += " "
+            rv += self.process(part)
+        return rv
+    
+    def process_OrOp(self, or_op: OrOp) -> str:
+        rv = ""
+        for c, part in enumerate(or_op.exprs):
+            if c != 0:
+                rv += " | "
+            rv += self.process(part)
+        return rv
+        
+    def process_StatementPointer(self, sp: StatementPointer) -> str:
+        return sp.target
+    
+    def process_TokenPointer(self, tp: TokenPointer) -> str:
+        return tp.target
+    
+    def process_ZeroOrMore(self, q: ZeroOrMore) -> str:
+        return self.process(q.expr) + "*"
+    
+    def process_OneOrMore(self, q: OneOrMore) -> str:
+        return self.process(q.expr) + "+"
+    
+    def process_ZeroOrOne(self, q: ZeroOrOne) -> str:
+        return self.process(q.expr) + "?"
+    
+    def process_ExprList(self, expr_list: ExprList) -> str:
+        rv = "("
+        for c, part in enumerate(expr_list.exprs):
+            if c != 0:
+                rv += " "
+            rv += self.process(part)
+        return rv + ")"
+    
+    def get_grammar(self) -> str:
+        result = ""
+        gap = max([len(name) for name in self.parser._grammar])
+        for name, rules in self.parser._grammar.items():
+            result += name + (gap-len(name))*" " + "  :  "
+            for c, rule in enumerate(rules):
+                s = self.process(rule)
+                if c != 0:
+                    result += gap*" " + "  |  "
+                result += f"{s}\n"
+        return result
+
+def get_grammar(parser: Parser) -> str:
+    return GrammarPrinter(parser).get_grammar()

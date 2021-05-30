@@ -129,7 +129,10 @@ p = CalcParser()
 while True:
     s = input("> ")
     l_result = l.lex_string(s)
-    p.parse(l.lex_string(s))
+    try:
+        p.parse(l.lex_string(s))
+    except Exception as e:
+        print(e)
 ```
 
 ### Handling Newlines
@@ -143,5 +146,44 @@ class MyLexer(Lexer):
         return t
     ...
 ```
+
+## Overcoming issues with left recursion
+Recursive descent parsers are unable to handle direct or indirect left recursion. This is an issue when writing expressions for left associative operators.
+The following example is directly left recursive:
+```
+expr  :  expr PLUS term
+```
+and when attempting to process this rule it will fall into an infinite loop.
+There are different ways to solve this problem, my solution is below:
+```
+expr  :  term (PLUS term)*
+```
+The disadvantage to this is that there is then some processing required after the pattern matching to reach the original desired strucutre or action.
+```python
+@grammar("term (PLUS term)*")
+def expr(self, p):
+    rv = p[0]
+    for op, term in p[1]:
+        rv += term
+    
+    return rv
+```
+See [here](https://en.wikipedia.org/wiki/Left_recursion) for more details.
+
+## Writing expressions for right-associative operators
+Some operators are right associative, for example the `**` operator.
+Right recursion can be implemented more normally in the grammar expression:
+```
+expr  :  term (POW expr)?
+```
+This behaves as expected, after pattern matching you do have to perform a check in your code as seen next:
+```python
+@grammar("term (POW expr)?")
+def expr(self, p):
+    if p[1]:
+        return p[0] ** p[1][1]
+    return p[0]
+```
+
 
 See `example_calc.py` and `example.py` for more examples, or look at the source code.

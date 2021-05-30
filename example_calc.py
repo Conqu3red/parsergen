@@ -104,4 +104,7 @@ p = CalcParser()
 while True:
     s = input("> ")
     l_result = l.lex_string(s)
-    p.parse(l.lex_string(s))
+    try:
+        p.parse(l.lex_string(s))
+    except Exception as e:
+        print(e)

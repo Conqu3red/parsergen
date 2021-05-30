@@ -7,13 +7,15 @@ Tokens:
 
 Grammar:
 
-statement  :  (ID COLON)? (expr)*
-expr       :  item
-expr       :  expr OR expr
-expr       :  expr STAR
-expr       :  expr PLUS
-expr       :  expr QMARK
-expr       :  LPAREN expr RPAREN
+statement  :  (ID COLON)? expr*
+expr_list  :  expr*
+expr       :  prec3 (OR prec3)*
+prec3      :  prec2 STAR?
+prec2      :  prec1 PLUS?
+prec1      :  factor QMARK?
+
+factor     :  LPAREN expr_list RPAREN
+factor     :  item
 
 item       :  ID | TOKEN
 """
@@ -154,41 +156,45 @@ class GrammarParser(object):
         return ExprList(exprs)
     
     def expr(self):
-        """
-        expr  :  item
-              |  or_op
-              |  expr STAR
-              |  expr PLUS
-        """
-        node = self.item()
-
+        "expr  :  prec3 (OR prec3)*"
+        node = self.prec3()
         if self.current_token.type == "OR":
-            node = self.or_op(node)
-        elif self.current_token.type == "STAR":
-            self.eat("STAR")
-            node = ZeroOrMore(node)
-        elif self.current_token.type == "PLUS":
-            self.eat("PLUS")
-            node = OneOrMore(node)
-        elif self.current_token.type == "QMARK":
-            self.eat("QMARK")
-            node = ZeroOrOne(node)
+            exprs = [node]
+            while self.current_token.type == "OR":
+                self.eat("OR")
+                exprs.append(self.expr())
+            
+            return OrOp(exprs=exprs)
         return node
     
-    def or_op(self, node) -> OrOp:
-        "or_op  :  expr (OR expr)*"
-        exprs = [node]
-        while self.current_token.type == "OR":
-            self.eat("OR")
-            exprs.append(self.expr())
-        
-        return OrOp(exprs)
+    def prec3(self):
+        "prec3  :  prec2 STAR?"
+        node = self.prec2()
+        if self.current_token.type == "STAR":
+            self.eat("STAR")
+            return ZeroOrMore(expr=node)
+        return node
 
+    def prec2(self):
+        "prec2  :  prec1 PLUS?"
+        node = self.prec1()
+        if self.current_token.type == "PLUS":
+            self.eat("PLUS")
+            return OneOrMore(expr=node)
+        return node
+    
+    def prec1(self):
+        "prec1  :  item QMARK?"
+        node = self.item()
+        if self.current_token.type == "QMARK":
+            self.eat("QMARK")
+            return ZeroOrOne(expr=node)
+        return node
 
     def item(self):
         """
         item  :  ID | TOKEN
-              |  LPAREN expr RPAREN
+              |  LPAREN expr_list RPAREN
         """
         t = self.current_token
         #print(f"item - {t}")

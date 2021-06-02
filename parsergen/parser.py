@@ -273,6 +273,7 @@ class ParserMeta(RequiredAttributes("tokens")):
         d["_grammar"] = {}
         return d
 
+
 class Parser(metaclass=ParserMeta):
     """Pattern matching Parser for grammar rules"""
     _grammar: Dict[str, List[StatementAndTarget]]
@@ -285,22 +286,33 @@ class Parser(metaclass=ParserMeta):
             return self.tokens[self.index]
         except IndexError:
             return Token("<EOF>", "__EOF__")
+    
+    def error(self) -> ParseError:
+        return ParseError(
+            f"Unexpected token {self.current_token.error_format()}", 
+            *self.current_token.pos,
+            lineText=self.lines[self.current_token.lineno-1] if self.current_token.lineno <= len(self.lines) else ""
+        )
 
 
     def pattern_match(self, starting_point=None) -> List[Any]:
         self.indent = 0
         if starting_point is not None:
-            matched, result = self.process_StatementAndTargetList(self._grammar[starting_point])
+            matched, result, err = self.process_StatementAndTargetList(self._grammar[starting_point])
             if matched:
                 return result
+            elif err:
+                raise err
             return
         
         for identifier in self._grammar:
-            matched, result = self.process_StatementAndTargetList(self._grammar[identifier])
+            matched, result, err = self.process_StatementAndTargetList(self._grammar[identifier])
             if matched:
                 return result
+            elif err:
+                raise err
 
-    def process(self, ast: AST) -> Tuple[bool, Any]:
+    def process(self, ast: AST) -> Tuple[bool, Any, Optional[ParseError]]:
         target = f"process_{ast.__class__.__qualname__}"
         #print(self.indent * "|" + target, " ", ast)
         self.indent += 1
@@ -309,83 +321,88 @@ class Parser(metaclass=ParserMeta):
         #print(self.indent * "|" + target, "RET ", ast, r)
         return r
     
-    def process_StatementAndTargetList(self, statements: List[StatementAndTarget]) -> Tuple[bool, Any]:
+    def process_StatementAndTargetList(self, statements: List[StatementAndTarget]) -> Tuple[bool, Any, Optional[ParseError]]:
+        err = None
         for statement, func in statements:
             i = self.index
-            matched, result = self.process(statement)
+            matched, result, err = self.process(statement)
             if matched:
-                return True, func(self, result)
+                return True, func(self, result), err
             self.index = i
         
-        return False, None
+        return False, None, err
     
     def process_Statement(self, statement: Statement) -> Tuple[bool, List[Any]]:
         result = []
+        err = None
         for part in statement.grammar:
-            matched, r = self.process(part)
+            matched, r, err = self.process(part)
             result.append(r)
             if not matched:
                 break
         else:
-            return True, result
-        return False, []
+            return True, result, err
+        return False, [], err
     
     def process_ExprList(self, exprList: ExprList) -> Tuple[bool, List[Any]]:
         result = []
+        err = None
         i = self.index
         for expr in exprList.exprs:
-            matched, r = self.process(expr)
+            matched, r, err = self.process(expr)
             result.append(r)
             if not matched:
                 break
         else:
-            return True, result
+            return True, result, err
         self.index = i
-        return False, []
+        return False, [], err
 
-    def process_TokenPointer(self, pointer: TokenPointer) -> Tuple[bool, Any]:
+    def process_TokenPointer(self, pointer: TokenPointer) -> Tuple[bool, Any, Optional[ParseError]]:
         if self.current_token.type == pointer.target:
-            rv = True, self.current_token.value
+            rv = True, self.current_token.value, None
             self.index += 1
         else:
-            return False, None
+            return False, None, self.error()
         return rv
     
-    def process_StatementPointer(self, pointer: StatementPointer) -> Tuple[bool, Any]:
+    def process_StatementPointer(self, pointer: StatementPointer) -> Tuple[bool, Any, Optional[ParseError]]:
         return self.process_StatementAndTargetList(self._grammar[pointer.target])
     
-    def process_ZeroOrMore(self, quantifier: ZeroOrMore) -> Tuple[bool, Any]:
+    def process_ZeroOrMore(self, quantifier: ZeroOrMore) -> Tuple[bool, Any, Optional[ParseError]]:
         result = []
         match = True
         while match:
-            match, r = self.process(quantifier.expr)
+            match, r, err = self.process(quantifier.expr)
             if match:
                 result.append(r)
             else:
                 break
-        return True, result
+        return True, result, None
     
-    def process_OneOrMore(self, quantifier: OneOrMore) -> Tuple[bool, Any]:
+    def process_OneOrMore(self, quantifier: OneOrMore) -> Tuple[bool, Any, Optional[ParseError]]:
         result = []
         match = True
+        err = None
         while match:
-            match, r = self.process(quantifier.expr)
+            match, r, err = self.process(quantifier.expr)
             if match:
                 result.append(r)
         if len(result) == 0:
-            return False, result
-        return True, result
+            return False, result, err
+        return True, result, None
     
-    def process_ZeroOrOne(self, quantifier: ZeroOrOne) -> Tuple[bool, Any]:
-        _, r = self.process(quantifier.expr)
-        return True, r
+    def process_ZeroOrOne(self, quantifier: ZeroOrOne) -> Tuple[bool, Any, Optional[ParseError]]:
+        _, r, err = self.process(quantifier.expr)
+        return True, r, err
     
-    def process_OrOp(self, or_op: OrOp) -> Tuple[bool, Any]:
+    def process_OrOp(self, or_op: OrOp) -> Tuple[bool, Any, Optional[ParseError]]:
+        err = None
         for expr in or_op.exprs:
-            match, result = self.process(expr)
+            match, result, err = self.process(expr)
             if match:
-                return True, result
-        return False, None
+                return True, result, err
+        return False, None, err
     
     @overload
     def parse(self, obj: LexerResult, starting_point=None) -> List:
@@ -410,17 +427,7 @@ class Parser(metaclass=ParserMeta):
 
         rv = self.pattern_match(starting_point=starting_point)
         if self.current_token.type != "__EOF__":
-            if self.lines:
-                raise ParseError(
-                    f"Unexpected token {self.current_token.error_format()}", 
-                    *self.current_token.pos,
-                    lineText=self.lines[self.current_token.lineno-1]
-                )
-            raise ParseError(
-                f"Unexpected token {self.current_token.error_format()}", 
-                *self.current_token.pos
-            )
-        
+            raise self.error()
         return rv
 
     @classmethod

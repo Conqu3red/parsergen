@@ -28,10 +28,10 @@ class CalcLexer(Lexer):
 """
 statement       :  assign | expr
 assign          :  SET ID TO expr
-expr            :  prec3
-prec3           :  prec2 (ADD | SUB prec2)*
-prec2           :  prec1 (MUL | DIV prec1)*
-prec1           :  factor (POW prec1)?
+expr            :  sum
+sum             :  product (ADD | SUB product)*
+product         :  power (MUL | DIV power)*
+power           :  factor (POW power)?
 factor          :  INT | ID
 factor          :  LPAREN expr RPAREN
 """
@@ -52,12 +52,12 @@ class CalcParser(Parser):
     def assign(self, p):
         self.names[p[1]] = p[3]
     
-    @grammar("prec3")
+    @grammar("sum")
     def expr(self, p):
         return p[0]
     
-    @grammar("prec2 (ADD | SUB prec2)*") # left associative
-    def prec3(self, p):
+    @grammar("product (ADD | SUB product)*") # left associative
+    def sum(self, p):
         r = p[0]
         for op, num in p[1]:
             if op == "+":
@@ -66,8 +66,8 @@ class CalcParser(Parser):
                 r -= num
         return r
     
-    @grammar("prec1 (MUL | DIV prec1)*") # left associative
-    def prec2(self, p):
+    @grammar("power (MUL | DIV power)*") # left associative
+    def product(self, p):
         r = p[0]
         for op, num in p[1]:
             if op == "*":
@@ -76,8 +76,8 @@ class CalcParser(Parser):
                 r /= num
         return r
     
-    @grammar("factor (POW prec1)?") # right associative
-    def prec1(self, p):
+    @grammar("factor (POW power)?") # right associative
+    def power(self, p):
         if p[1]:
             return p[0] ** p[1][1]
         return p[0]

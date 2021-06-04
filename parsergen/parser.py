@@ -7,7 +7,8 @@ Tokens:
 
 Grammar:
 
-statement  :  (ID COLON)? expr*
+statement_list : statement*
+statement  :  (ID? COLON)? expr*
 expr_list  :  expr*
 expr       :  prec3 (OR prec3)*
 prec3      :  prec2 STAR?
@@ -84,30 +85,46 @@ class OrOp(Expr):
         return f"{self.__class__.__qualname__}(exprs={self.exprs!r})"
 
 
+class NamedItem(Expr):
+    def __init__(self, name: str, expr: Expr) -> None:
+        self.name = name
+        self.expr = expr
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}(name={self.name!r}, expr={self.expr!r})"
+
+
 class Statement(object):
-    def __init__(self, name: str, grammar: List[Expr]) -> None:
+    def __init__(self, name: str, grammar: List[Expr], action=None) -> None:
         self.name = name
         self.grammar = grammar
+        self.action = action
     
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(name={self.name!r}, grammar={self.grammar!r})"
 
 
 class GrammarLexer(Lexer):
-    ID =      r"[a-z0-9_]+"
-    TOKEN =   r"[A-Z0-9_]+"
-    COLON =   r"\:"
-    OR =      r"\|"
-    STAR =    r"\*"
-    PLUS =    r"\+"
-    QMARK =   r"\?"
-    LPAREN =  r"\("
-    RPAREN =  r"\)"
-    NEWLINE = r"\n"
+    ID =        r"[a-z0-9_]+"
+    TOKEN =     r"[A-Z0-9_]+"
+    COLON =     r"\:"
+    OR =        r"\|"
+    STAR =      r"\*"
+    PLUS =      r"\+"
+    QMARK =     r"\?"
+    LPAREN =    r"\("
+    RPAREN =    r"\)"
+    TERMINATE = r";"
+    EQ        = r"="
+    @token(r"{.+}")
+    def ACTION(self, t):
+        t.value = t.value[1:-1].strip()
+        return t
     
-    ignore = " \t"
+    ignore = " \t\n"
 
-
+# rewrite this to make it neater
+# Add methods to the Lexer so it is like a token stream (maybe?)
 class GrammarParser(object):
     """Parses grammar expressions/rules into and AST"""
     def __init__(self) -> None:
@@ -120,7 +137,7 @@ class GrammarParser(object):
             raise Exception(f"Found Token '{self.current_token.type}' but expected Token '{token_name}'")
 
     def eof(self):
-        return Token("<EOF>", "EOF")
+        return Token("EOF", "<EOF>")
 
     @property
     def current_token(self):
@@ -133,20 +150,43 @@ class GrammarParser(object):
         if len(self.tokens) > 1:
             return self.tokens[1]
         return self.eof()
+    
+    def statement_list(self) -> List[Statement]:
+        "statement*"
+        statements = []
+        current_name = "<>"
+        while len(self.tokens) > 0:
+            stmt = self.statement()
+            if stmt.name == "<>":
+                stmt.name = current_name
+            else:
+                current_name = stmt.name
+            statements.append(stmt)
+        return statements
 
     def statement(self) -> Statement:
-        "(ID COLON)? (expr)*"
+        "(ID? COLON)? (expr)* ACTION? TERMINATE"
         token = self.current_token
-        name = "_"
-        if self.current_token.type == "ID" and self.next_token.type == "COLON":
+        name = "<>"
+        if token.type == "ID":
             self.eat("ID")
             name = token.value
+        if self.current_token.type == "COLON":
             self.eat("COLON")
         expr = []
-        while len(self.tokens) > 0 and self.current_token.type != "NEWLINE":
+        action = None
+        while len(self.tokens) > 0:
+            if self.current_token.type == "ACTION":
+                action = self.current_token.value
+                self.eat("ACTION")
+                self.eat("TERMINATE")
+                break
+            if self.current_token.type == "TERMINATE":
+                self.eat("TERMINATE")
+                break
             expr.append(self.expr())
         
-        return Statement(name, expr)
+        return Statement(name, expr, action=action)
     
     def expr_list(self):
         "expr*"
@@ -156,13 +196,22 @@ class GrammarParser(object):
         return ExprList(exprs)
     
     def expr(self):
-        "expr  :  prec3 (OR prec3)*"
+        "expr  :  (ID EQ)? prec4"
+        if self.current_token.type == "ID" and self.next_token.type == "EQ":
+            name = self.current_token.value
+            self.eat("ID")
+            self.eat("EQ")
+            return NamedItem(name, self.prec4())
+        return self.prec4()
+
+    def prec4(self):
+        "prec4 :  prec3 (OR prec3)*"
         node = self.prec3()
         if self.current_token.type == "OR":
             exprs = [node]
             while self.current_token.type == "OR":
                 self.eat("OR")
-                exprs.append(self.expr())
+                exprs.append(self.prec3())
             
             return OrOp(exprs=exprs)
         return node
@@ -216,6 +265,11 @@ class GrammarParser(object):
         self.tokens = tokens
 
         return self.statement() # curently only supports a single statement
+    
+    def parse_all(self, tokens: List[Token]) -> List[Statement]:
+        self.tokens = tokens
+
+        return self.statement_list()
 
 
 class StatementAndTarget(NamedTuple):
@@ -230,7 +284,7 @@ def grammar(statement: str):
         l = GrammarLexer()
         tokens = l.lex_string(statement).tokens
         r = GrammarParser().parse(tokens)
-        if r.name == "_":
+        if r.name == "<>":
             r.name = func.__name__
         func._rule = r
 
@@ -285,7 +339,7 @@ class Parser(metaclass=ParserMeta):
         try:
             return self.tokens[self.index]
         except IndexError:
-            return Token("<EOF>", "__EOF__")
+            return Token("__EOF__", "<EOF>")
     
     def error(self) -> ParseError:
         return ParseError(
@@ -499,8 +553,8 @@ class Parser(metaclass=ParserMeta):
 del Parser.tokens
 
 class GrammarPrinter:
-    def __init__(self, parser: Parser) -> None:
-        self.parser = parser
+    def __init__(self, _grammar) -> None:
+        self._grammar = _grammar
     
     def process(self, ast):
         target = f"process_{ast.__class__.__qualname__}"
@@ -516,7 +570,9 @@ class GrammarPrinter:
             if c != 0:
                 rv += " "
             rv += self.process(part)
-        return rv
+        if statement.action:
+            rv += f" { {statement.action} }"
+        return rv + ";"
     
     def process_OrOp(self, or_op: OrOp) -> str:
         rv = ""
@@ -549,17 +605,22 @@ class GrammarPrinter:
             rv += self.process(part)
         return rv + ")"
     
-    def get_grammar(self) -> str:
+    def process_NamedItem(self, item: NamedItem) -> str:
+        return f"{item.name}={self.process(item.expr)}"
+    
+    def format_grammar(self) -> str:
         result = ""
-        gap = max([len(name) for name in self.parser._grammar])
-        for name, rules in self.parser._grammar.items():
+        gap = max([len(name) for name in self._grammar])
+        for name, rules in self._grammar.items():
             result += name + (gap-len(name))*" " + "  :  "
             for c, rule in enumerate(rules):
                 s = self.process(rule)
                 if c != 0:
-                    result += gap*" " + "  |  "
+                    result += gap*" " + "  :  "
                 result += f"{s}\n"
         return result
 
-def get_grammar(parser: Parser) -> str:
-    return GrammarPrinter(parser).get_grammar()
+def format_grammar(g) -> str:
+    if isinstance(g, Parser):
+        g = g._grammar
+    return GrammarPrinter(g).format_grammar()

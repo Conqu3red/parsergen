@@ -6,14 +6,14 @@ from .utils import *
 import itertools
 
 class Token(object):
-    def __init__(self, value, _type, lineno=0, column=0):
+    def __init__(self, type, value, lineno=0, column=0):
+        self.type = type
         self.value = value
-        self.type = _type
         self.lineno = lineno
         self.column = column
     
     def __str__(self):
-        return f"<Token(value={self.value!r}, type={self.type!r}, lineno={self.lineno}, column={self.column})>"
+        return f"<Token(type={self.type!r}, value={self.value!r}, lineno={self.lineno}, column={self.column})>"
     
     def __repr__(self):
         return self.__str__()
@@ -118,9 +118,9 @@ class Lexer(metaclass=LexerMeta):
             self.current_line = ""
         self._lineno = value
     
-    def Token(self, value, tokenType):
+    def Token(self, tokenType, value):
         token = Token(
-            value, tokenType,
+            tokenType, value,
             lineno=self.lineno, column=self.column
         )
         return token
@@ -136,7 +136,7 @@ class Lexer(metaclass=LexerMeta):
                 r = re.match(regex, self.source)
                 if r:
                     self.step_source(r.span()[1])
-                    rv = self.Token(r.group(), token_name)
+                    rv = self.Token(token_name, r.group())
                     if rule.modifier:
                         rv = rule.modifier(self, rv)
                     return rv if not token_name.startswith("ignore_") else None
@@ -156,7 +156,7 @@ class Lexer(metaclass=LexerMeta):
             #        r = re.match(regex, self.source)
             #        if r:
             #            self.step_source(r.span()[1])
-            #            rv = self.Token(r.group(), token_name)
+            #            rv = self.Token(token_name, r.group())
             #            if rule.modifier:
             #                rv = rule.modifier(self, rv)
             if len(self.source) == 0:
@@ -170,3 +170,24 @@ class Lexer(metaclass=LexerMeta):
 
 
 del Lexer.ignore
+
+class TokenStream:
+    def __init__(self, tokens: List[Token]) -> None:
+        self.tokens = tokens
+        self.pos = 0
+    
+    def mark(self):
+        return self.pos
+    
+    def goto(self, pos):
+        self.pos = pos
+    
+    def get_token(self):
+        tok = self.peek_token()
+        self.pos += 1
+        return tok
+    
+    def peek_token(self):
+        if self.pos >= len(self.tokens):
+            return Token("EOF", "<EOF>")
+        return self.tokens[self.pos]

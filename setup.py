@@ -25,5 +25,6 @@ setuptools.setup(
         'console_scripts': [
             'parsergen = parsergen.__main__:main'
         ]
-    }
+    },
+    package_data={"": ["*.gram"]}
 )

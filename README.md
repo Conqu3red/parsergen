@@ -1,7 +1,7 @@
 # parsergen
 A simple library for creating lexers and PEG parsers.
 
-[Generating Parsers](#Generating%20Parsers)
+[Generating Parsers](#generating-parsers)
 
 # Quickstart
 ```

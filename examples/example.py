@@ -99,4 +99,4 @@ pprint(t.lines)
 r = p.parse(l.lex_string("""SET a TO 2 ADD 3 MUL 4\nSET b TO 1 DIV 2 DIV 3"""))
 print(r)
 
-print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*"))
+print(MyParser().get_result_structure("statement_list  :  (statement NEWLINE*)*;"))

@@ -1,0 +1,16 @@
+statement_list  :  s=statement* EOF { s };
+statement       :  n=(ID? COLON)? es=expr* a=ACTION? TERMINATE { Statement(
+    n[0].value if not isinstance(n, Filler) and not isinstance(n[0], Filler) else "<>", 
+    es, 
+    action=a.value if not isinstance(a, Filler) else None
+) };
+expr_list       :  es=expr* { ExprList(es) };
+expr            :  name=(ID EQ)? v=prec4 { NamedItem(name[0].value, v) if not isinstance(name, Filler) else v };
+prec4           :  v=prec3 others=(OR prec3)* { OrOp(exprs=[v]+[o[1] for o in others]) if len(others) > 0 else v };
+prec3           :  v=prec2 s=STAR? { ZeroOrMore(v) if not isinstance(s, Filler) else v };
+prec2           :  v=prec1 s=PLUS? { OneOrMore(v) if not isinstance(s, Filler) else v };
+prec1           :  v=factor s=QMARK? { ZeroOrOne(v) if not isinstance(s, Filler) else v };
+factor          :  i=item { i };
+                :  LPAREN es=expr_list RPAREN { es };
+item            :  i=ID { StatementPointer(i.value) };
+                :  i=TOKEN { TokenPointer(i.value) };

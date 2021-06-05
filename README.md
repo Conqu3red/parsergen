@@ -1,6 +1,8 @@
 # parsergen
 A simple library for creating lexers and PEG parsers.
 
+[Generating Parsers](#Generating%20Parsers)
+
 # Quickstart
 ```
 pip install parsergen
@@ -202,3 +204,58 @@ The only rules not supported are:
 The simple calculator described implementes grammar similar to the rules seen [here](https://en.wikipedia.org/wiki/Parsing_expression_grammar#Examples)
 
 See `example_calc.py` and `example.py` for more examples, or look at the source code.
+
+# Generating Parsers
+This module can also be used to generate parsers.
+This is a more advanced use, the generated parser's grammar can even include left recursion!
+
+By using slightly more advanced grammar expressions, we can develop the grammar rules for a simple calculator,
+`examples/calc.gram:`
+```
+expr   :  left=expr ADD right=term   { left + right };
+       :  left=expr SUB right=term   { left - right };
+       :  e=term { e };
+
+term   :  left=term MUL right=factor { left * right };
+       :  left=term DIV right=factor { left * right };
+       :  e=factor { e };
+
+factor :  left=item POW right=factor { left ** right };
+       :  e=item { e };
+
+item    :  n=INT { int(n.value) };
+        :  LPAREN e=expr RPAREN { e };
+```
+Then you can run the following to generate the parser: (you might have to use `python3` instead of `python`)
+```
+parsergen calc.gram -o calc_parser.py
+```
+## Using the generated parser
+We will follow along with the example in `examples/calc.py` for how to use the generated parser.
+You muse first declare the Lexer which provides the required token types.
+Then you have to provide the parser a `TokenStream` of your tokenized/lexed input:
+```python
+from calc_parser import CustomParser as CalcParser
+from parsergen import Lexer, Token, token
+from parsergen.parser_utils import TokenStream
+
+class CalcLexer(Lexer):
+    INT    =  r"[0-9]+"
+    ADD    =  r"\+"
+    SUB    =  r"\-"
+    POW    =  r"\*\*" # must be first, as is longer than 'MUL' token!
+    MUL    =  r"\*"
+    DIV    =  r"\/"
+    LPAREN =  r"\("
+    RPAREN =  r"\)"
+    
+    ignore = " \t"
+    ignore_comment = r"\#.*"
+
+while True:
+    expr = input("> ")
+    tokens = CalcLexer().lex_string(expr).tokens # get list of tokens from input
+    stream = TokenStream(tokens) # create token stream
+    parser = CalcParser(stream)
+    print(parser.start())
+```

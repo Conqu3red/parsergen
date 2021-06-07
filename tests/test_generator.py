@@ -26,7 +26,7 @@ g = Generator()
 r = g.generate("""
 expr  : (A B|C|D)+ EOF;
 """)
-#print(r)
+print(r)
 exec(r)
 t = CustomParser(TokenStream([
     Token(char, "") for char in "AB AC AD" if char != " "

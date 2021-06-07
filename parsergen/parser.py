@@ -391,11 +391,15 @@ class GrammarPrinter:
         result = ""
         gap = max([len(name) for name in self._grammar])
         for name, rules in self._grammar.items():
-            result += name + (gap-len(name))*" " + "  :  "
+            if len(rules) <= 1:
+                result += f"{name}  :  "
+            else:
+                result += f"{name}\n    :  "
+            
             for c, rule in enumerate(rules):
                 s = self.process(rule)
                 if c != 0:
-                    result += gap*" " + "  :  "
+                    result += "    :  "
                 result += f"{s}\n"
         return result
 

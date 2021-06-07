@@ -40,6 +40,25 @@ from functools import reduce
 
 """
 
+"""
+TODO:
+    make generated parser be like:
+    parts = []
+    for _ in range(1):
+        part = self.expect("A")
+        if not self.match(part): break
+        parts.append(part)
+
+        part = self.match("B")
+        if not self.match(part): break
+        parts.append(part)
+        
+        return <Success>
+    
+    return <Failure>
+        
+"""
+
 class Generator:
     def __init__(self) -> None:
         self.result = ""
@@ -134,23 +153,25 @@ class Generator:
         return HEADER + self.result
     
     def gen_statement(self, stmt: Statement, queue):
-        self.push("parts = [")
+        self.push("parts = []")
         named_items = []
+        self.push("for _ in range(1):")
         with self.indent():
             for c, item in enumerate(stmt.grammar):
                 if isinstance(item, NamedItem):
                     named_items.append((c, item))
                     item = item.expr
                 self.gen(item, queue)
-        self.push("]")
-        self.push("if self.match(parts):")
-        with self.indent():
+                self.push("if not self.match(part): break")
+                self.push("parts.append(part)")     
+            self.push("# match:")
             for c, named_item in named_items:
                 self.push(f"{named_item.name} = parts[{c}]")
             if stmt.action:
                 self.push(f"return {stmt.action}")
             else:
-                self.push(f"return Node({stmt.name!r}, parts)")
+                self.push(f"return Node({stmt.name!r}, parts)")  
+        
         self.push(f"self.goto(pos)\n")
     
     def gen(self, item: Expr, queue):
@@ -160,41 +181,35 @@ class Generator:
     #    return f"{f}({', '.join(repr(arg) for arg in args)})"
     
     def gen_TokenPointer(self, item: TokenPointer, queue):
-        self.push(f"self.expect({item.target!r}),")
+        self.push(f"part = self.expect({item.target!r})")
     
     def gen_StatementPointer(self, item: StatementPointer, queue):
-        self.push(f"self.{item.target}(),")
+        self.push(f"part = self.{item.target}()")
 
     
     def gen_ZeroOrMore(self, item: ZeroOrMore, queue):
         queue.append((item, self.counter))
-        self.push(f"self._loop_{self.counter}(),")
+        self.push(f"part = self._loop_{self.counter}()")
         self.counter += 1
     
     def gen_OneOrMore(self, item: OneOrMore, queue):
         queue.append((item, self.counter))
-        self.push(f"self._loop_{self.counter}(),")
+        self.push(f"part = self._loop_{self.counter}()")
         self.counter += 1
     
     def gen_ZeroOrOne(self, item: ZeroOrOne, queue):
         queue.append((item, self.counter))
-        self.push(f"self._maybe_{self.counter}(),")
+        self.push(f"part = self._maybe_{self.counter}()")
         self.counter += 1
     
     def gen_OrOp(self, item: OrOp, queue):
-        self.push("reduce(")
-        with self.indent():
-            self.push("self._or,")
-            self.push("[")
-            with self.indent():
-                for choice in item.exprs:
-                    self.gen(choice, queue)
-            self.push("]")
-        self.push("),")
+        queue.append((item, self.counter))
+        self.push(f"part = self._or_{self.counter}()")
+        self.counter += 1
 
     def gen_ExprList(self, item: ExprList, queue):
         queue.append((item, self.counter))
-        self.push(f"self._expr_list_{self.counter}(),")
+        self.push(f"part = self._expr_list_{self.counter}()")
         self.counter += 1
     
     def resolve(self, item: Expr, c, queue):
@@ -207,10 +222,7 @@ class Generator:
             self.push("while True:")
             with self.indent():
                 self.push("pos = self.mark()")
-                self.push("part = (")
-                with self.indent():
-                    self.gen(item.expr, queue)
-                self.push(")[0]")
+                self.gen(item.expr, queue)
                 self.push("if self.match(part): children.append(part)")
                 self.push("else:")
                 with self.indent():
@@ -225,10 +237,7 @@ class Generator:
             self.push("while True:")
             with self.indent():
                 self.push("pos = self.mark()")
-                self.push("part = (")
-                with self.indent():
-                    self.gen(item.expr, queue)
-                self.push(")[0]")
+                self.gen(item.expr, queue)
                 self.push("if self.match(part): children.append(part)")
                 self.push("else:")
                 with self.indent():
@@ -240,10 +249,7 @@ class Generator:
         self.push(f"def _maybe_{c}(self):")
         with self.indent():
             self.push("pos = self.mark()")
-            self.push("part = (")
-            with self.indent():
-                self.gen(item.expr, queue)
-            self.push(")[0]")
+            self.gen(item.expr, queue)
             self.push("if self.match(part): return part")
             self.push("self.goto(pos)")
             self.push("return Filler()")
@@ -252,12 +258,24 @@ class Generator:
         self.push(f"def _expr_list_{c}(self):")
         with self.indent():
             self.push("pos = self.mark()")
-            self.push("parts = [")
+            self.push("parts = []")
+            self.push("for _ in range(1):")
             with self.indent():
                 for part in item.exprs:
                     self.gen(part, queue)
-            self.push("]")
-            self.push("if self.match(parts): return parts")
+                    self.push("if not self.match(part): break")
+                    self.push("parts.append(part)")     
+                self.push("return parts")
+            self.push("self.goto(pos)")
+            self.push("return None")
+    
+    def resolve_OrOp(self, item: OrOp, c, queue):
+        self.push(f"def _or_{c}(self):")
+        with self.indent():
+            self.push("pos = self.mark()")
+            for choice in item.exprs:
+                self.gen(choice, queue)
+                self.push("if self.match(part): return part")
             self.push("self.goto(pos)")
             self.push("return None")
 

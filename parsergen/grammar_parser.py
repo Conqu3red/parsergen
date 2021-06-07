@@ -112,24 +112,26 @@ class CustomParser(GeneratedParser):
     @memoize
     def statement_list(self):
         pos = self.mark()
-        parts = [
-            self._loop_0(),
-            self.expect('EOF'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self._loop_0()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('EOF')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             s = parts[0]
             return s
         self.goto(pos)
-        
+
         return None
-        
+
     def _loop_0(self):
         children = []
         while True:
             pos = self.mark()
-            part = (
-                self.statement(),
-            )[0]
+            part = self.statement()
             if self.match(part): children.append(part)
             else:
                 self.goto(pos)
@@ -138,47 +140,55 @@ class CustomParser(GeneratedParser):
     @memoize
     def statement(self):
         pos = self.mark()
-        parts = [
-            self._maybe_1(),
-            self._loop_2(),
-            self._maybe_3(),
-            self.expect('TERMINATE'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self._maybe_1()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._loop_2()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._maybe_3()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('TERMINATE')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             n = parts[0]
             es = parts[1]
             a = parts[2]
             return Statement(
-                n[0].value if not isinstance(n, Filler) and not isinstance(n[0], Filler) else "<>", 
-                es, 
+                n[0].value if not isinstance(n, Filler) and not isinstance(n[0], Filler) else "<>",
+                es,
                 action=a.value if not isinstance(a, Filler) else None
             )
         self.goto(pos)
-        
+
         return None
-        
+
     def _maybe_1(self):
         pos = self.mark()
-        part = (
-            self._expr_list_4(),
-        )[0]
+        part = self._expr_list_4()
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     def _expr_list_4(self):
         pos = self.mark()
-        parts = [
-            self._maybe_5(),
-            self.expect('COLON'),
-        ]
-        if self.match(parts): return parts
+        parts = []
+        for _ in range(1):
+            part = self._maybe_5()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('COLON')
+            if not self.match(part): break
+            parts.append(part)
+            return parts
         self.goto(pos)
         return None
     def _maybe_5(self):
         pos = self.mark()
-        part = (
-            self.expect('ID'),
-        )[0]
+        part = self.expect('ID')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
@@ -186,9 +196,7 @@ class CustomParser(GeneratedParser):
         children = []
         while True:
             pos = self.mark()
-            part = (
-                self.expr(),
-            )[0]
+            part = self.expr()
             if self.match(part): children.append(part)
             else:
                 self.goto(pos)
@@ -196,32 +204,30 @@ class CustomParser(GeneratedParser):
         return children
     def _maybe_3(self):
         pos = self.mark()
-        part = (
-            self.expect('ACTION'),
-        )[0]
+        part = self.expect('ACTION')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     @memoize_left_rec
     def expr_list(self):
         pos = self.mark()
-        parts = [
-            self._loop_6(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self._loop_6()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             es = parts[0]
             return ExprList(es)
         self.goto(pos)
-        
+
         return None
-        
+
     def _loop_6(self):
         children = []
         while True:
             pos = self.mark()
-            part = (
-                self.expr(),
-            )[0]
+            part = self.expr()
             if self.match(part): children.append(part)
             else:
                 self.goto(pos)
@@ -230,57 +236,65 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def expr(self):
         pos = self.mark()
-        parts = [
-            self._maybe_7(),
-            self.prec4(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self._maybe_7()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.prec4()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             name = parts[0]
             v = parts[1]
             return NamedItem(name[0].value, v) if not isinstance(name, Filler) else v
         self.goto(pos)
-        
+
         return None
-        
+
     def _maybe_7(self):
         pos = self.mark()
-        part = (
-            self._expr_list_8(),
-        )[0]
+        part = self._expr_list_8()
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     def _expr_list_8(self):
         pos = self.mark()
-        parts = [
-            self.expect('ID'),
-            self.expect('EQ'),
-        ]
-        if self.match(parts): return parts
+        parts = []
+        for _ in range(1):
+            part = self.expect('ID')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('EQ')
+            if not self.match(part): break
+            parts.append(part)
+            return parts
         self.goto(pos)
         return None
     @memoize_left_rec
     def prec4(self):
         pos = self.mark()
-        parts = [
-            self.prec3(),
-            self._loop_9(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.prec3()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._loop_9()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             v = parts[0]
             others = parts[1]
             return OrOp(exprs=[v]+[o[1] for o in others]) if len(others) > 0 else v
         self.goto(pos)
-        
+
         return None
-        
+
     def _loop_9(self):
         children = []
         while True:
             pos = self.mark()
-            part = (
-                self._expr_list_10(),
-            )[0]
+            part = self._expr_list_10()
             if self.match(part): children.append(part)
             else:
                 self.goto(pos)
@@ -288,122 +302,144 @@ class CustomParser(GeneratedParser):
         return children
     def _expr_list_10(self):
         pos = self.mark()
-        parts = [
-            self.expect('OR'),
-            self.prec3(),
-        ]
-        if self.match(parts): return parts
+        parts = []
+        for _ in range(1):
+            part = self.expect('OR')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.prec3()
+            if not self.match(part): break
+            parts.append(part)
+            return parts
         self.goto(pos)
         return None
     @memoize_left_rec
     def prec3(self):
         pos = self.mark()
-        parts = [
-            self.prec2(),
-            self._maybe_11(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.prec2()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._maybe_11()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             v = parts[0]
             s = parts[1]
             return ZeroOrMore(v) if not isinstance(s, Filler) else v
         self.goto(pos)
-        
+
         return None
-        
+
     def _maybe_11(self):
         pos = self.mark()
-        part = (
-            self.expect('STAR'),
-        )[0]
+        part = self.expect('STAR')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     @memoize_left_rec
     def prec2(self):
         pos = self.mark()
-        parts = [
-            self.prec1(),
-            self._maybe_12(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.prec1()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._maybe_12()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             v = parts[0]
             s = parts[1]
             return OneOrMore(v) if not isinstance(s, Filler) else v
         self.goto(pos)
-        
+
         return None
-        
+
     def _maybe_12(self):
         pos = self.mark()
-        part = (
-            self.expect('PLUS'),
-        )[0]
+        part = self.expect('PLUS')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     @memoize_left_rec
     def prec1(self):
         pos = self.mark()
-        parts = [
-            self.factor(),
-            self._maybe_13(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.factor()
+            if not self.match(part): break
+            parts.append(part)
+            part = self._maybe_13()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             v = parts[0]
             s = parts[1]
             return ZeroOrOne(v) if not isinstance(s, Filler) else v
         self.goto(pos)
-        
+
         return None
-        
+
     def _maybe_13(self):
         pos = self.mark()
-        part = (
-            self.expect('QMARK'),
-        )[0]
+        part = self.expect('QMARK')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     @memoize_left_rec
     def factor(self):
         pos = self.mark()
-        parts = [
-            self.item(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.item()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             i = parts[0]
             return i
         self.goto(pos)
-        
-        parts = [
-            self.expect('LPAREN'),
-            self.expr_list(),
-            self.expect('RPAREN'),
-        ]
-        if self.match(parts):
+
+        parts = []
+        for _ in range(1):
+            part = self.expect('LPAREN')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expr_list()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('RPAREN')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             es = parts[1]
             return es
         self.goto(pos)
-        
+
         return None
-        
+
     @memoize
     def item(self):
         pos = self.mark()
-        parts = [
-            self.expect('ID'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expect('ID')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             i = parts[0]
             return StatementPointer(i.value)
         self.goto(pos)
-        
-        parts = [
-            self.expect('TOKEN'),
-        ]
-        if self.match(parts):
+
+        parts = []
+        for _ in range(1):
+            part = self.expect('TOKEN')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             i = parts[0]
             return TokenPointer(i.value)
         self.goto(pos)
-        
+
         return None

@@ -1,4 +1,5 @@
 from .lexer import TokenStream
+from functools import wraps
 
 class Filler:
     def __repr__(self) -> str:
@@ -13,6 +14,7 @@ class Node:
         return f"Node({self.type!r}, {self.children!r})"
 
 def memoize(func):
+    @wraps(func)
     def memoize_wrapper(self, *args):
         pos = self.mark()
         memo = self.memos
@@ -30,6 +32,7 @@ def memoize(func):
 
 def memoize_left_rec(func):
     # https://github.com/PhilippeSigaud/Pegged/wiki/Left-Recursion
+    @wraps(func)
     def memoize_left_rec_wrapper(self, *args):
         pos = self.mark()
         memo = self.memos

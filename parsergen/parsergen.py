@@ -190,7 +190,7 @@ class Generator:
                 for choice in item.exprs:
                     self.gen(choice, queue)
             self.push("]")
-        self.push(")")
+        self.push("),")
 
     def gen_ExprList(self, item: ExprList, queue):
         queue.append((item, self.counter))

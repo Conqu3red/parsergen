@@ -75,7 +75,7 @@ class CustomParser(GeneratedParser):
         if self.match(parts):
             left = parts[0]
             right = parts[2]
-            return left * right
+            return left / right
         self.goto(pos)
         
         parts = [

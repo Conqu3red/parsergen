@@ -7,11 +7,15 @@ class CustomParser(GeneratedParser):
     @memoize
     def start(self):
         pos = self.mark()
-        parts = [
-            self.expr(),
-            self.expect('EOF'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expr()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('EOF')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             e = parts[0]
             return e
         self.goto(pos)
@@ -21,32 +25,46 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def expr(self):
         pos = self.mark()
-        parts = [
-            self.expr(),
-            self.expect('ADD'),
-            self.term(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expr()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('ADD')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.term()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             left = parts[0]
             right = parts[2]
             return left + right
         self.goto(pos)
         
-        parts = [
-            self.expr(),
-            self.expect('SUB'),
-            self.term(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expr()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('SUB')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.term()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             left = parts[0]
             right = parts[2]
             return left - right
         self.goto(pos)
         
-        parts = [
-            self.term(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.term()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             e = parts[0]
             return e
         self.goto(pos)
@@ -56,32 +74,46 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def term(self):
         pos = self.mark()
-        parts = [
-            self.term(),
-            self.expect('MUL'),
-            self.factor(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.term()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('MUL')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.factor()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             left = parts[0]
             right = parts[2]
             return left * right
         self.goto(pos)
         
-        parts = [
-            self.term(),
-            self.expect('DIV'),
-            self.factor(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.term()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('DIV')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.factor()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             left = parts[0]
             right = parts[2]
             return left / right
         self.goto(pos)
         
-        parts = [
-            self.factor(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.factor()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             e = parts[0]
             return e
         self.goto(pos)
@@ -91,21 +123,29 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def factor(self):
         pos = self.mark()
-        parts = [
-            self.item(),
-            self.expect('POW'),
-            self.factor(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.item()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('POW')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.factor()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             left = parts[0]
             right = parts[2]
             return left ** right
         self.goto(pos)
         
-        parts = [
-            self.item(),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.item()
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             e = parts[0]
             return e
         self.goto(pos)
@@ -115,20 +155,28 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def item(self):
         pos = self.mark()
-        parts = [
-            self.expect('INT'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expect('INT')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             n = parts[0]
             return int(n.value)
         self.goto(pos)
         
-        parts = [
-            self.expect('LPAREN'),
-            self.expr(),
-            self.expect('RPAREN'),
-        ]
-        if self.match(parts):
+        parts = []
+        for _ in range(1):
+            part = self.expect('LPAREN')
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expr()
+            if not self.match(part): break
+            parts.append(part)
+            part = self.expect('RPAREN')
+            if not self.match(part): break
+            parts.append(part)
+            # match:
             e = parts[1]
             return e
         self.goto(pos)

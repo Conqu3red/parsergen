@@ -56,6 +56,14 @@ TODO:
         return <Success>
     
     return <Failure>
+
+Add support for
+@header:
+somevalue or something
+header@
+
+also:
+# comments
         
 """
 
@@ -276,7 +284,7 @@ class Generator:
             for choice in item.exprs:
                 self.gen(choice, queue)
                 self.push("if self.match(part): return part")
-            self.push("self.goto(pos)")
+                self.push("self.goto(pos)")
             self.push("return None")
 
     def resolve_queue(self, queue):

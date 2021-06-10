@@ -44,11 +44,11 @@ print(r)
 exec(r)
 
 l = GrammarLexer()
-token_stream = TokenStream(l.lex_string(pgram).tokens) #broken?
+token_stream = TokenStream(l.lex_string(pgram)) #broken?
 p = CustomParser(token_stream)
 result = p.statement_list()
 
-expected = parse_all(l.lex_string(pgram).tokens)
+expected = parse_all(l.lex_string(pgram))
 
 #print(result)
 print(format_grammar(post_process(result)))
@@ -58,3 +58,19 @@ print(format_grammar(post_process(expected)))
 
 assert repr(post_process(result)) == repr(post_process(expected))
 #print(token_stream.peek_token())
+
+
+
+
+### ERROR TEST ###
+g = Generator()
+r = g.generate("""
+expr  : (A B C D) | (A B A D) EOF;
+""")
+print(r)
+exec(r)
+t = CustomParser(TokenStream([
+    Token(char, "") for char in "A B E D" if char != " "
+]))
+print(t.expr())
+print(t.error_pos, t.error())

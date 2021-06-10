@@ -1,3 +1,4 @@
+from typing import Optional
 from .lexer import TokenStream
 from functools import wraps
 
@@ -57,12 +58,42 @@ def memoize_left_rec(func):
     return memoize_left_rec_wrapper
 
 
+class ParseError(Exception):
+    def __init__(self, msg, lineno, column, lineText=""):
+        self.msg = msg
+        self.lineno = lineno
+        self.column = column
+        self.lineText = lineText
+    
+    def __str__(self):
+        ret = f"\n  Line {self.lineno}:\n"
+        if self.lineText:
+            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
+        return ret + f"{self.msg}"
+
+
 class GeneratedParser:
     _or = lambda _, a, b: a or b
 
     def __init__(self, token_stream: TokenStream) -> None:
         self.memos = {}
         self.token_stream = token_stream
+        self.error_pos = -1
+
+    def fail(self):
+        pos = self.mark()
+        if pos > self.error_pos:
+            self.error_pos = pos
+    
+    def error(self) -> Optional[ParseError]:
+        if self.error_pos == -1:
+            return None
+        tok = self.fetch(self.error_pos)
+        return ParseError(
+            f"Unexpected token {tok.error_format()}", 
+            *tok.pos,
+            lineText=self.token_stream.lines[tok.lineno-1] if tok.lineno-1 < len(self.token_stream.lines) else ""
+        )
     
     def mark(self):
         return self.token_stream.mark()
@@ -80,6 +111,9 @@ class GeneratedParser:
     
     def peek_token(self):
         return self.token_stream.peek_token()
+    
+    def fetch(self, pos):
+        return self.token_stream.fetch(pos)
     
     def match(self, part):
         if isinstance(part, list):

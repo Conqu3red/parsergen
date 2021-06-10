@@ -17,7 +17,12 @@ class CalcLexer(Lexer):
 
 while True:
     expr = input("> ")
-    tokens = CalcLexer().lex_string(expr).tokens # get list of tokens from input
-    stream = TokenStream(tokens) # create token stream
+    lexer_result = CalcLexer().lex_string(expr) # get LexerResult from input
+    stream = TokenStream(lexer_result) # create token stream
     parser = CalcParser(stream)
-    print(parser.start())
+    result = parser.start()
+    error = parser.error()
+    if result is None and error is not None:
+        print(error) # error handling
+    else:
+        print(result)

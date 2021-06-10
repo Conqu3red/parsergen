@@ -133,7 +133,7 @@ class Generator:
     def generate(self, grammar: str):
         rules = {}
         gl = GrammarLexer()
-        rules_list = parse_all(gl.lex_string(grammar).tokens)
+        rules_list = parse_all(gl.lex_string(grammar))
         rules = post_process(rules_list)
 
         #pprint(rules)
@@ -170,7 +170,10 @@ class Generator:
                     named_items.append((c, item))
                     item = item.expr
                 self.gen(item, queue)
-                self.push("if not self.match(part): break")
+                self.push("if not self.match(part):")
+                with self.indent():
+                    self.push("self.fail()")
+                    self.push("break")
                 self.push("parts.append(part)")     
             self.push("# match:")
             for c, named_item in named_items:
@@ -249,6 +252,9 @@ class Generator:
                 self.push("if self.match(part): children.append(part)")
                 self.push("else:")
                 with self.indent():
+                    self.push("if len(children) == 0:")
+                    with self.indent():
+                        self.push("self.fail()")
                     self.push("self.goto(pos)")
                     self.push("break")
             self.push("return children if len(children) > 0 else None")
@@ -271,7 +277,10 @@ class Generator:
             with self.indent():
                 for part in item.exprs:
                     self.gen(part, queue)
-                    self.push("if not self.match(part): break")
+                    self.push("if not self.match(part):")
+                    with self.indent():
+                        self.push("self.fail()")
+                        self.push("break")
                     self.push("parts.append(part)")     
                 self.push("return parts")
             self.push("self.goto(pos)")
@@ -285,6 +294,7 @@ class Generator:
                 self.gen(choice, queue)
                 self.push("if self.match(part): return part")
                 self.push("self.goto(pos)")
+            self.push("self.fail()")
             self.push("return None")
 
     def resolve_queue(self, queue):

@@ -10,10 +10,14 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.expr()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('EOF')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             e = parts[0]
@@ -28,13 +32,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.expr()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('ADD')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.term()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             left = parts[0]
@@ -45,13 +55,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.expr()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('SUB')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.term()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             left = parts[0]
@@ -62,7 +78,9 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.term()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             e = parts[0]
@@ -77,13 +95,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.term()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('MUL')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.factor()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             left = parts[0]
@@ -94,13 +118,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.term()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('DIV')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.factor()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             left = parts[0]
@@ -111,7 +141,9 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.factor()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             e = parts[0]
@@ -126,13 +158,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.item()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('POW')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.factor()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             left = parts[0]
@@ -143,7 +181,9 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.item()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             e = parts[0]
@@ -158,7 +198,9 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.expect('INT')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             n = parts[0]
@@ -168,13 +210,19 @@ class CustomParser(GeneratedParser):
         parts = []
         for _ in range(1):
             part = self.expect('LPAREN')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expr()
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             part = self.expect('RPAREN')
-            if not self.match(part): break
+            if not self.match(part):
+                self.fail()
+                break
             parts.append(part)
             # match:
             e = parts[1]

@@ -25,16 +25,24 @@ from .utils import *
 from typing import *
 from .grammar_parser import *
 from .grammar_parser import CustomParser as GrammarParser
+from .parser_utils import ParseError
 
 
-def parse_statement(tokens: List[Token]):
-    r = GrammarParser(TokenStream(tokens))
-    return r.statement()
+def parse_statement(lexer_result: LexerResult):
+    r = GrammarParser(TokenStream(lexer_result))
+    rv = r.statement()
+    err = r.error()
+    if rv is None and err is not None:
+        raise err
+    return rv
 
-def parse_all(tokens: List[Token]):
-    r = GrammarParser(TokenStream(tokens))
-    return r.statement_list()
-
+def parse_all(lexer_result: LexerResult):
+    r = GrammarParser(TokenStream(lexer_result))
+    rv = r.statement_list()
+    err = r.error()
+    if rv is None and err is not None:
+        raise err
+    return rv
 
 def post_process(rules_list: List[Statement]) -> Dict[str, List[Statement]]:
     rules = {}
@@ -61,8 +69,8 @@ def grammar(statement: str):
         statement += ";"
     def inner(func):
         l = GrammarLexer()
-        tokens = l.lex_string(statement).tokens
-        r = parse_statement(tokens)
+        result = l.lex_string(statement)
+        r = parse_statement(result)
         if r.name == "<>":
             r.name = func.__name__
         func._rule = r
@@ -70,19 +78,6 @@ def grammar(statement: str):
         return func
     
     return inner
-
-class ParseError(Exception):
-    def __init__(self, msg, lineno, column, lineText=""):
-        self.msg = msg
-        self.lineno = lineno
-        self.column = column
-        self.lineText = lineText
-    
-    def __str__(self):
-        ret = f"\n  Line {self.lineno}:\n"
-        if self.lineText:
-            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
-        return ret + f"{self.msg}"
 
 
 class ParserMetaDict(dict):
@@ -274,8 +269,8 @@ class Parser(metaclass=ParserMeta):
         
         """
         l = GrammarLexer()
-        tokens = l.lex_string(statement).tokens
-        r = parse_statement(tokens)
+        result = l.lex_string(statement)
+        r = parse_statement(result)
 
         return cls.rs(r)
     

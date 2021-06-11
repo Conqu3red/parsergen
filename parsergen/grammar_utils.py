@@ -94,9 +94,15 @@ class GrammarLexer(Lexer):
     RPAREN =    r"\)"
     TERMINATE = r";"
     EQ        = r"="
-    @token(r"\{[\s\S]+?\}")
+    @token(r"\{([\s\S]+?)\}\s*;\s*(\n|$)")
     def ACTION(self, t):
-        t.value = t.value[1:-1].strip()
+        self.source = ";\n" + self.source
+        t.value = re.match(r"\{([\s\S]+?)\}\s*;\s*(\n|$)", t.value).group(1).strip()
         return t
     
-    ignore = " \t\n"
+    @token(r"\n")
+    def NEWLINE(self, t):
+        self.lineno += 1
+        self.column = 0
+    
+    ignore = " \t"

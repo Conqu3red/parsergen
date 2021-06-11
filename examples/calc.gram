@@ -1,0 +1,15 @@
+start  :  e=expr EOF  { e };
+
+expr   :  left=expr ADD right=term   { left + right };
+       :  left=expr SUB right=term   { left - right };
+       :  e=term { e };
+
+term   :  left=term MUL right=factor { left * right };
+       :  left=term DIV right=factor { left / right };
+       :  e=factor { e };
+
+factor :  left=item POW right=factor { left ** right };
+       :  e=item { e };
+
+item    :  n=INT { int(n.value) };
+        :  LPAREN e=expr RPAREN { e };

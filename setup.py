@@ -20,5 +20,11 @@ setuptools.setup(
     url="https://github.com/Conqu3red/parsergen",
     packages=setuptools.find_packages(),
     python_requires=">=3.6",
-    install_requires=[]
+    install_requires=[],
+    entry_points = {
+        'console_scripts': [
+            'parsergen = parsergen.__main__:main'
+        ]
+    },
+    package_data={"": ["*.gram"]}
 )

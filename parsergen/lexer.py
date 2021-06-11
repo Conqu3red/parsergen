@@ -6,14 +6,14 @@ from .utils import *
 import itertools
 
 class Token(object):
-    def __init__(self, value, _type, lineno=0, column=0):
+    def __init__(self, type, value, lineno=0, column=0):
+        self.type = type
         self.value = value
-        self.type = _type
         self.lineno = lineno
         self.column = column
     
     def __str__(self):
-        return f"<Token(value={self.value!r}, type={self.type!r}, lineno={self.lineno}, column={self.column})>"
+        return f"<Token(type={self.type!r}, value={self.value!r}, lineno={self.lineno}, column={self.column})>"
     
     def __repr__(self):
         return self.__str__()
@@ -118,9 +118,9 @@ class Lexer(metaclass=LexerMeta):
             self.current_line = ""
         self._lineno = value
     
-    def Token(self, value, tokenType):
+    def Token(self, tokenType, value):
         token = Token(
-            value, tokenType,
+            tokenType, value,
             lineno=self.lineno, column=self.column
         )
         return token
@@ -136,7 +136,7 @@ class Lexer(metaclass=LexerMeta):
                 r = re.match(regex, self.source)
                 if r:
                     self.step_source(r.span()[1])
-                    rv = self.Token(r.group(), token_name)
+                    rv = self.Token(token_name, r.group())
                     if rule.modifier:
                         rv = rule.modifier(self, rv)
                     return rv if not token_name.startswith("ignore_") else None
@@ -151,14 +151,6 @@ class Lexer(metaclass=LexerMeta):
         while len(self.source) > 0:
             while len(self.source) > 0 and self.source[0] in self.ignore:
                 self.step_source(1)
-            #for token_name, rule in self._ignores.items():
-            #    for regex in rule.match:
-            #        r = re.match(regex, self.source)
-            #        if r:
-            #            self.step_source(r.span()[1])
-            #            rv = self.Token(r.group(), token_name)
-            #            if rule.modifier:
-            #                rv = rule.modifier(self, rv)
             if len(self.source) == 0:
                 break
             token = self.getToken()
@@ -170,3 +162,38 @@ class Lexer(metaclass=LexerMeta):
 
 
 del Lexer.ignore
+
+class TokenStream:
+    def __init__(self, lexer_result: Union[LexerResult, List[Token]]) -> None:
+        if isinstance(lexer_result, list):
+            lexer_result = LexerResult(lexer_result, [])
+        self.tokens = lexer_result.tokens
+        self.lines = lexer_result.lines
+        self.pos = 0
+    
+    def mark(self):
+        return self.pos
+    
+    def goto(self, pos):
+        self.pos = pos
+    
+    def get_token(self):
+        tok = self.peek_token()
+        self.pos += 1
+        return tok
+    
+    def peek_token(self):
+        if self.pos >= len(self.tokens):
+            eof_pos = (0, 0)
+            if len(self.tokens) > 0:
+                eof_pos = list(self.tokens[-1].pos)
+                eof_pos[1] += 1
+            return Token("EOF", "<EOF>", *eof_pos)
+        return self.tokens[self.pos]
+    
+    def fetch(self, pos):
+        old = self.pos
+        self.pos = pos
+        rv = self.peek_token()
+        self.pos = old
+        return rv

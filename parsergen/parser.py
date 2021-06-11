@@ -7,216 +7,56 @@ Tokens:
 
 Grammar:
 
-statement  :  (ID COLON)? expr*
-expr_list  :  expr*
-expr       :  prec3 (OR prec3)*
-prec3      :  prec2 STAR?
-prec2      :  prec1 PLUS?
-prec1      :  factor QMARK?
+statement_list : statement* EOF;
+statement      :  (ID? COLON)? expr*;
+expr_list      :  expr*;
+expr           :  (ID EQ)? prec4;
+prec4          :  prec3 (OR prec3)*;
+prec3          :  prec2 STAR?;
+prec2          :  prec1 PLUS?;
+prec1          :  factor QMARK?;
 
-factor     :  LPAREN expr_list RPAREN
-factor     :  item
-
-item       :  ID | TOKEN
+factor         :  LPAREN expr_list RPAREN;
+               :  item;
+item           :  ID | TOKEN;
 """
 from .lexer import *
 from .utils import *
 from typing import *
+from .grammar_parser import *
+from .grammar_parser import CustomParser as GrammarParser
+from .parser_utils import ParseError
 
 
-class AST(object):
-    pass
+def parse_statement(lexer_result: LexerResult):
+    r = GrammarParser(TokenStream(lexer_result))
+    rv = r.statement()
+    err = r.error()
+    if rv is None and err is not None:
+        raise err
+    return rv
 
+def parse_all(lexer_result: LexerResult):
+    r = GrammarParser(TokenStream(lexer_result))
+    rv = r.statement_list()
+    err = r.error()
+    if rv is None and err is not None:
+        raise err
+    return rv
 
-class Pointer(AST):
-    def __init__(self, target: str) -> None:
-        self.target = target
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(target={self.target!r})"
-
-
-class StatementPointer(Pointer):
-    pass
-
-
-class TokenPointer(Pointer):
-    pass
-
-
-class Expr(AST):
-    pass
-
-
-class ExprList(AST):
-    def __init__(self, exprs) -> None:
-        self.exprs = exprs
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(exprs={self.exprs!r})"
-
-
-class Quantifier(Expr):
-    def __init__(self, expr: Expr) -> None:
-        self.expr = expr
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(expr={self.expr!r})"
-
-
-class ZeroOrMore(Quantifier):
-    pass
-
-
-class OneOrMore(Quantifier):
-    pass
-
-
-class ZeroOrOne(Quantifier):
-    pass
-
-
-class OrOp(Expr):
-    def __init__(self, exprs: List[Expr]) -> None:
-        self.exprs = exprs
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(exprs={self.exprs!r})"
-
-
-class Statement(object):
-    def __init__(self, name: str, grammar: List[Expr]) -> None:
-        self.name = name
-        self.grammar = grammar
-    
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(name={self.name!r}, grammar={self.grammar!r})"
-
-
-class GrammarLexer(Lexer):
-    ID =      r"[a-z0-9_]+"
-    TOKEN =   r"[A-Z0-9_]+"
-    COLON =   r"\:"
-    OR =      r"\|"
-    STAR =    r"\*"
-    PLUS =    r"\+"
-    QMARK =   r"\?"
-    LPAREN =  r"\("
-    RPAREN =  r"\)"
-    NEWLINE = r"\n"
-    
-    ignore = " \t"
-
-
-class GrammarParser(object):
-    """Parses grammar expressions/rules into and AST"""
-    def __init__(self) -> None:
-        pass
-
-    def eat(self, token_name: str):
-        if self.current_token.type == token_name:
-            self.tokens.pop(0)
+def post_process(rules_list: List[Statement]) -> Dict[str, List[Statement]]:
+    rules = {}
+    current_name = "<>"
+    for r in rules_list:
+        if r.name == "<>":
+            r.name = current_name
         else:
-            raise Exception(f"Found Token '{self.current_token.type}' but expected Token '{token_name}'")
-
-    def eof(self):
-        return Token("<EOF>", "EOF")
-
-    @property
-    def current_token(self):
-        if len(self.tokens) > 0:
-            return self.tokens[0]
-        return self.eof()
-    
-    @property
-    def next_token(self):
-        if len(self.tokens) > 1:
-            return self.tokens[1]
-        return self.eof()
-
-    def statement(self) -> Statement:
-        "(ID COLON)? (expr)*"
-        token = self.current_token
-        name = "_"
-        if self.current_token.type == "ID" and self.next_token.type == "COLON":
-            self.eat("ID")
-            name = token.value
-            self.eat("COLON")
-        expr = []
-        while len(self.tokens) > 0 and self.current_token.type != "NEWLINE":
-            expr.append(self.expr())
-        
-        return Statement(name, expr)
-    
-    def expr_list(self):
-        "expr*"
-        exprs = []
-        while len(self.tokens) > 0 and self.current_token.type != "RPAREN":
-            exprs.append(self.expr())
-        return ExprList(exprs)
-    
-    def expr(self):
-        "expr  :  prec3 (OR prec3)*"
-        node = self.prec3()
-        if self.current_token.type == "OR":
-            exprs = [node]
-            while self.current_token.type == "OR":
-                self.eat("OR")
-                exprs.append(self.expr())
-            
-            return OrOp(exprs=exprs)
-        return node
-    
-    def prec3(self):
-        "prec3  :  prec2 STAR?"
-        node = self.prec2()
-        if self.current_token.type == "STAR":
-            self.eat("STAR")
-            return ZeroOrMore(expr=node)
-        return node
-
-    def prec2(self):
-        "prec2  :  prec1 PLUS?"
-        node = self.prec1()
-        if self.current_token.type == "PLUS":
-            self.eat("PLUS")
-            return OneOrMore(expr=node)
-        return node
-    
-    def prec1(self):
-        "prec1  :  item QMARK?"
-        node = self.item()
-        if self.current_token.type == "QMARK":
-            self.eat("QMARK")
-            return ZeroOrOne(expr=node)
-        return node
-
-    def item(self):
-        """
-        item  :  ID | TOKEN
-              |  LPAREN expr_list RPAREN
-        """
-        t = self.current_token
-        #print(f"item - {t}")
-        if t.type == "ID":
-            self.eat(t.type)
-            return StatementPointer(t.value)
-        elif t.type == "TOKEN":
-            self.eat(t.type)
-            return TokenPointer(t.value)
-        elif t.type == "LPAREN":
-            self.eat("LPAREN")
-            rv = self.expr_list()
-            self.eat("RPAREN")
-            return rv
-
-
-
-    def parse(self, tokens: List[Token]):
-        self.tokens = tokens
-
-        return self.statement() # curently only supports a single statement
-
+            current_name = r.name
+        if r.name in rules:
+            rules[r.name].append(r)
+        else:
+            rules[r.name] = [r]
+    return rules
 
 class StatementAndTarget(NamedTuple):
     statement: Statement
@@ -225,31 +65,19 @@ class StatementAndTarget(NamedTuple):
 
 def grammar(statement: str):
     """decorator for declaring grammar rules/statements"""
-    
+    if not statement.rstrip().endswith(";"):
+        statement += ";"
     def inner(func):
         l = GrammarLexer()
-        tokens = l.lex_string(statement).tokens
-        r = GrammarParser().parse(tokens)
-        if r.name == "_":
+        result = l.lex_string(statement)
+        r = parse_statement(result)
+        if r.name == "<>":
             r.name = func.__name__
         func._rule = r
 
         return func
     
     return inner
-
-class ParseError(Exception):
-    def __init__(self, msg, lineno, column, lineText=""):
-        self.msg = msg
-        self.lineno = lineno
-        self.column = column
-        self.lineText = lineText
-    
-    def __str__(self):
-        ret = f"\n  Line {self.lineno}:\n"
-        if self.lineText:
-            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
-        return ret + f"{self.msg}"
 
 
 class ParserMetaDict(dict):
@@ -285,7 +113,7 @@ class Parser(metaclass=ParserMeta):
         try:
             return self.tokens[self.index]
         except IndexError:
-            return Token("<EOF>", "__EOF__")
+            return Token("__EOF__", "<EOF>")
     
     def error(self) -> ParseError:
         return ParseError(
@@ -441,8 +269,8 @@ class Parser(metaclass=ParserMeta):
         
         """
         l = GrammarLexer()
-        tokens = l.lex_string(statement).tokens
-        r = GrammarParser().parse(tokens)
+        result = l.lex_string(statement)
+        r = parse_statement(result)
 
         return cls.rs(r)
     
@@ -499,8 +327,8 @@ class Parser(metaclass=ParserMeta):
 del Parser.tokens
 
 class GrammarPrinter:
-    def __init__(self, parser: Parser) -> None:
-        self.parser = parser
+    def __init__(self, _grammar) -> None:
+        self._grammar = _grammar
     
     def process(self, ast):
         target = f"process_{ast.__class__.__qualname__}"
@@ -516,7 +344,9 @@ class GrammarPrinter:
             if c != 0:
                 rv += " "
             rv += self.process(part)
-        return rv
+        if statement.action:
+            rv += " { " + statement.action + " }"
+        return rv + ";"
     
     def process_OrOp(self, or_op: OrOp) -> str:
         rv = ""
@@ -549,17 +379,26 @@ class GrammarPrinter:
             rv += self.process(part)
         return rv + ")"
     
-    def get_grammar(self) -> str:
+    def process_NamedItem(self, item: NamedItem) -> str:
+        return f"{item.name}={self.process(item.expr)}"
+    
+    def format_grammar(self) -> str:
         result = ""
-        gap = max([len(name) for name in self.parser._grammar])
-        for name, rules in self.parser._grammar.items():
-            result += name + (gap-len(name))*" " + "  :  "
+        gap = max([len(name) for name in self._grammar])
+        for name, rules in self._grammar.items():
+            if len(rules) <= 1:
+                result += f"{name}  :  "
+            else:
+                result += f"{name}\n    :  "
+            
             for c, rule in enumerate(rules):
                 s = self.process(rule)
                 if c != 0:
-                    result += gap*" " + "  |  "
+                    result += "    :  "
                 result += f"{s}\n"
         return result
 
-def get_grammar(parser: Parser) -> str:
-    return GrammarPrinter(parser).get_grammar()
+def format_grammar(g) -> str:
+    if isinstance(g, Parser):
+        g = g._grammar
+    return GrammarPrinter(g).format_grammar()

@@ -79,7 +79,7 @@ print(t.error_pos, t.error())
 ### predicates
 g = Generator()
 r = g.generate("""
-expr  : A B !C EOF;
+expr  : (A B !C) EOF;
 """)
 print(r)
 exec(r)

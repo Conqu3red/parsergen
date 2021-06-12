@@ -300,11 +300,13 @@ class Generator:
             with self.indent():
                 for part in item.exprs:
                     self.gen(part, queue)
-                    self.push("if not self.match(part):")
-                    with self.indent():
-                        self.push("self.fail()")
-                        self.push("break")
-                    self.push("parts.append(part)")     
+                    if not isinstance(part, Predicate):
+                        # don't generate extra clause for Predicates
+                        self.push("if not self.match(part):")
+                        with self.indent():
+                            self.push("self.fail()")
+                            self.push("break")
+                        self.push("parts.append(part)")     
                 self.push("return parts")
             self.push("self.goto(pos)")
             self.push("return None")

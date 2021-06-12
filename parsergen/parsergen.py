@@ -23,6 +23,9 @@ from .parser import (
     TokenPointer,
     ZeroOrMore,
     ZeroOrOne,
+    Predicate,
+    AndPredicate,
+    NotPredicate,
     format_grammar,
     post_process,
     parse_statement,
@@ -170,11 +173,13 @@ class Generator:
                     named_items.append((c, item))
                     item = item.expr
                 self.gen(item, queue)
-                self.push("if not self.match(part):")
-                with self.indent():
-                    self.push("self.fail()")
-                    self.push("break")
-                self.push("parts.append(part)")     
+                if not isinstance(item, Predicate):
+                    # don't generate extra clause for Predicates
+                    self.push("if not self.match(part):")
+                    with self.indent():
+                        self.push("self.fail()")
+                        self.push("break")
+                    self.push("parts.append(part)")     
             self.push("# match:")
             for c, named_item in named_items:
                 self.push(f"{named_item.name} = parts[{c}]")
@@ -196,6 +201,24 @@ class Generator:
     
     def gen_StatementPointer(self, item: StatementPointer, queue):
         self.push(f"part = self.{item.target}()")
+    
+    def gen_AndPredicate(self, item: AndPredicate, queue):
+        self.push("predicate_pos = self.mark()")
+        self.gen(item.expr, queue)
+        self.push("self.goto(predicate_pos)")
+        self.push("if not self.match(part):")
+        with self.indent():
+            self.push("self.fail()")
+            self.push("break")
+    
+    def gen_NotPredicate(self, item: NotPredicate, queue):
+        self.push("predicate_pos = self.mark()")
+        self.gen(item.expr, queue)
+        self.push("self.goto(predicate_pos)")
+        self.push("if self.match(part):")
+        with self.indent():
+            self.push("self.fail()")
+            self.push("break")
 
     
     def gen_ZeroOrMore(self, item: ZeroOrMore, queue):

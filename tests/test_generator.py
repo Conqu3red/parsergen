@@ -74,3 +74,16 @@ t = CustomParser(TokenStream([
 ]))
 print(t.expr())
 print(t.error_pos, t.error())
+
+
+### predicates
+g = Generator()
+r = g.generate("""
+expr  : A B !C EOF;
+""")
+print(r)
+exec(r)
+t = CustomParser(TokenStream([Token(char, "") for char in "A B C" if char != " "]))
+print(t.expr())
+t = CustomParser(TokenStream([Token(char, "") for char in "A B" if char != " "]))
+print(t.expr())

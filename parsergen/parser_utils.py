@@ -89,10 +89,11 @@ class GeneratedParser:
         if self.error_pos == -1:
             return None
         tok = self.fetch(self.error_pos)
+        number_of_lines = len(self.token_stream.lines)
         return ParseError(
             f"Unexpected token {tok.error_format()}", 
             *tok.pos,
-            lineText=self.token_stream.lines[tok.lineno-1] if tok.lineno-1 < len(self.token_stream.lines) else ""
+            lineText=self.token_stream.lines[tok.lineno-1] if tok.lineno-1 < number_of_lines and number_of_lines else ""
         )
     
     def mark(self):

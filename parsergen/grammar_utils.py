@@ -2,7 +2,9 @@ from typing import *
 from .lexer import *
 
 class AST(object):
-    pass
+    def __repr__(self) -> str:
+        params = ", ".join(f"{k}={v!r}" for k,v in vars(self).items())
+        return f"{self.__class__.__qualname__}({params})"
 
 
 class Pointer(AST):
@@ -70,6 +72,20 @@ class NamedItem(Expr):
         return f"{self.__class__.__qualname__}(name={self.name!r}, expr={self.expr!r})"
 
 
+class Predicate(Expr):
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}(expr={self.expr!r})"
+
+class AndPredicate(Predicate):
+    def __init__(self, expr: Expr) -> None:
+        self.expr = expr
+
+
+class NotPredicate(Predicate):
+    def __init__(self, expr: Expr) -> None:
+        self.expr = expr
+
+
 class Statement(object):
     def __init__(self, name: str, grammar: List[Expr], action=None) -> None:
         self.name = name
@@ -83,17 +99,19 @@ class Statement(object):
 
 
 class GrammarLexer(Lexer):
-    ID =        r"[a-z0-9_]+"
-    TOKEN =     r"[A-Z0-9_]+"
-    COLON =     r"\:"
-    OR =        r"\|"
-    STAR =      r"\*"
-    PLUS =      r"\+"
-    QMARK =     r"\?"
-    LPAREN =    r"\("
-    RPAREN =    r"\)"
+    ID        = r"[a-z0-9_]+"
+    TOKEN     = r"[A-Z0-9_]+"
+    COLON     = r"\:"
+    OR        = r"\|"
+    STAR      = r"\*"
+    PLUS      = r"\+"
+    QMARK     = r"\?"
+    LPAREN    = r"\("
+    RPAREN    = r"\)"
     TERMINATE = r";"
     EQ        = r"="
+    NOT       = r"!"
+    AND       = r"&"
     @token(r"\{([\s\S]+?)\}\s*;\s*(\n|$)")
     def ACTION(self, t):
         self.source = ";\n" + self.source

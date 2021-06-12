@@ -371,6 +371,12 @@ class GrammarPrinter:
     def process_ZeroOrOne(self, q: ZeroOrOne) -> str:
         return self.process(q.expr) + "?"
     
+    def process_AndPredicate(self, p: AndPredicate) -> str:
+        return "&" + self.process(p.expr)
+    
+    def process_NotPredicate(self, p: NotPredicate) -> str:
+        return "!" + self.process(p.expr)
+    
     def process_ExprList(self, expr_list: ExprList) -> str:
         rv = "("
         for c, part in enumerate(expr_list.exprs):

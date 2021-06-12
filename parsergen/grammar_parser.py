@@ -158,7 +158,7 @@ class CustomParser(GeneratedParser):
                 self.fail()
                 break
             parts.append(part)
-            part = self.prec4()
+            part = self.or_op()
             if not self.match(part):
                 self.fail()
                 break
@@ -195,11 +195,11 @@ class CustomParser(GeneratedParser):
         self.goto(pos)
         return None
     @memoize_left_rec
-    def prec4(self):
+    def or_op(self):
         pos = self.mark()
         parts = []
         for _ in range(1):
-            part = self.prec3()
+            part = self.star_op()
             if not self.match(part):
                 self.fail()
                 break
@@ -236,7 +236,7 @@ class CustomParser(GeneratedParser):
                 self.fail()
                 break
             parts.append(part)
-            part = self.prec3()
+            part = self.star_op()
             if not self.match(part):
                 self.fail()
                 break
@@ -245,11 +245,11 @@ class CustomParser(GeneratedParser):
         self.goto(pos)
         return None
     @memoize_left_rec
-    def prec3(self):
+    def star_op(self):
         pos = self.mark()
         parts = []
         for _ in range(1):
-            part = self.prec2()
+            part = self.plus_op()
             if not self.match(part):
                 self.fail()
                 break
@@ -274,11 +274,11 @@ class CustomParser(GeneratedParser):
         self.goto(pos)
         return Filler()
     @memoize_left_rec
-    def prec2(self):
+    def plus_op(self):
         pos = self.mark()
         parts = []
         for _ in range(1):
-            part = self.prec1()
+            part = self.qmark_op()
             if not self.match(part):
                 self.fail()
                 break
@@ -303,11 +303,11 @@ class CustomParser(GeneratedParser):
         self.goto(pos)
         return Filler()
     @memoize_left_rec
-    def prec1(self):
+    def qmark_op(self):
         pos = self.mark()
         parts = []
         for _ in range(1):
-            part = self.factor()
+            part = self.term()
             if not self.match(part):
                 self.fail()
                 break
@@ -331,6 +331,57 @@ class CustomParser(GeneratedParser):
         if self.match(part): return part
         self.goto(pos)
         return Filler()
+    @memoize_left_rec
+    def term(self):
+        pos = self.mark()
+        parts = []
+        for _ in range(1):
+            part = self.expect('AND')
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            part = self.factor()
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            # match:
+            f = parts[1]
+            return AndPredicate(f)
+        self.goto(pos)
+        
+        parts = []
+        for _ in range(1):
+            part = self.expect('NOT')
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            part = self.factor()
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            # match:
+            f = parts[1]
+            return NotPredicate(f)
+        self.goto(pos)
+        
+        parts = []
+        for _ in range(1):
+            part = self.factor()
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            # match:
+            f = parts[0]
+            return f
+        self.goto(pos)
+        
+        return None
+        
     @memoize_left_rec
     def factor(self):
         pos = self.mark()

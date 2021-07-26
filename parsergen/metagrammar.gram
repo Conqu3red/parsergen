@@ -20,3 +20,4 @@ factor
 item
     :  i=ID { StatementPointer(i.value) };
     :  i=TOKEN { TokenPointer(i.value) };
+    :  i=STRING { ConstantString(i.value) };

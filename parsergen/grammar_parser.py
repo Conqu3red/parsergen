@@ -539,5 +539,20 @@ class CustomParser(GeneratedParser):
             return TokenPointer(i.value)
         self.goto(pos)
         
+        """
+        i=STRING { ConstantString(i.value) };
+        """
+        parts = []
+        for _ in range(1):
+            part = self.expect('STRING')
+            if not self.match(part):
+                self.fail()
+                break
+            parts.append(part)
+            # match:
+            i = parts[0]
+            return ConstantString(i.value)
+        self.goto(pos)
+        
         return None
         

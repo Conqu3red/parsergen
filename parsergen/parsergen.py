@@ -182,6 +182,9 @@ class Generator:
     def gen_StatementPointer(self, item: StatementPointer, queue):
         self.push(f"part = self.{item.target}()")
     
+    def gen_ConstantString(self, item: ConstantString, queue):
+        self.push(f"part = self.expect_constant({item.value!r})")
+    
     def gen_AndPredicate(self, item: AndPredicate, queue):
         self.push("predicate_pos = self.mark()")
         self.gen(item.expr, queue)

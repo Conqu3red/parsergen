@@ -7,6 +7,9 @@ class CustomParser(GeneratedParser):
     @memoize
     def start(self):
         pos = self.mark()
+        """
+        e=expr EOF { e };
+        """
         parts = []
         for _ in range(1):
             part = self.expr()
@@ -29,6 +32,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def expr(self):
         pos = self.mark()
+        """
+        left=expr ADD right=term { left + right };
+        """
         parts = []
         for _ in range(1):
             part = self.expr()
@@ -52,6 +58,9 @@ class CustomParser(GeneratedParser):
             return left + right
         self.goto(pos)
         
+        """
+        left=expr SUB right=term { left - right };
+        """
         parts = []
         for _ in range(1):
             part = self.expr()
@@ -75,6 +84,9 @@ class CustomParser(GeneratedParser):
             return left - right
         self.goto(pos)
         
+        """
+        e=term { e };
+        """
         parts = []
         for _ in range(1):
             part = self.term()
@@ -92,6 +104,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def term(self):
         pos = self.mark()
+        """
+        left=term MUL right=factor { left * right };
+        """
         parts = []
         for _ in range(1):
             part = self.term()
@@ -115,6 +130,9 @@ class CustomParser(GeneratedParser):
             return left * right
         self.goto(pos)
         
+        """
+        left=term DIV right=factor { left / right };
+        """
         parts = []
         for _ in range(1):
             part = self.term()
@@ -138,6 +156,9 @@ class CustomParser(GeneratedParser):
             return left / right
         self.goto(pos)
         
+        """
+        e=factor { e };
+        """
         parts = []
         for _ in range(1):
             part = self.factor()
@@ -155,6 +176,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def factor(self):
         pos = self.mark()
+        """
+        left=item POW right=factor { left ** right };
+        """
         parts = []
         for _ in range(1):
             part = self.item()
@@ -178,6 +202,9 @@ class CustomParser(GeneratedParser):
             return left ** right
         self.goto(pos)
         
+        """
+        e=item { e };
+        """
         parts = []
         for _ in range(1):
             part = self.item()
@@ -195,6 +222,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def item(self):
         pos = self.mark()
+        """
+        n=INT { int(n.value) };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('INT')
@@ -207,6 +237,9 @@ class CustomParser(GeneratedParser):
             return int(n.value)
         self.goto(pos)
         
+        """
+        LPAREN e=expr RPAREN { e };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('LPAREN')

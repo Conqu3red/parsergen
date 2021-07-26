@@ -1,13 +1,16 @@
 from typing import *
 from .lexer import *
+import codecs
 
 class AST(object):
     def __repr__(self) -> str:
         params = ", ".join(f"{k}={v!r}" for k,v in vars(self).items())
         return f"{self.__class__.__qualname__}({params})"
 
+class Terminator(AST):
+    pass
 
-class Pointer(AST):
+class Pointer(Terminator):
     def __init__(self, target: str) -> None:
         self.target = target
     
@@ -21,6 +24,13 @@ class StatementPointer(Pointer):
 
 class TokenPointer(Pointer):
     pass
+
+class ConstantString(Terminator):
+    def __init__(self, value: str) -> None:
+        self.value = value
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}(value={self.value!r})"
 
 
 class Expr(AST):
@@ -112,11 +122,36 @@ class GrammarLexer(Lexer):
     EQ        = r"="
     NOT       = r"!"
     AND       = r"&"
+    
     @token(r"\{([\s\S]+?)\}\s*;\s*(\n|$)")
     def ACTION(self, t):
         self.source = ";\n" + self.source
         t.value = re.match(r"\{([\s\S]+?)\}\s*;\s*(\n|$)", t.value).group(1).strip()
         return t
+    
+    @token(r"(')")
+    def STRING(self, t):
+        end = t.value
+        escape = False
+        result = ""
+        while True:
+            if len(self.source) > 0:
+                cur_char = self.source[0]
+                self.step_source(1)
+                if not escape and cur_char == "\\":
+                    result += cur_char
+                    if len(self.source) == 0:
+                        continue
+                    cur_char = self.source[0]
+                    self.step_source(1)
+                    escape = True
+                if cur_char == end and not escape:
+                    t.value = codecs.getdecoder("unicode_escape")(result)[0]
+                    return t
+                result += cur_char
+                escape = False
+            else:
+                raise Exception("No end of string")
     
     @token(r"\n")
     def NEWLINE(self, t):

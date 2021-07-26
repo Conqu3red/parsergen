@@ -362,6 +362,9 @@ class GrammarPrinter:
     def process_TokenPointer(self, tp: TokenPointer) -> str:
         return tp.target
     
+    def process_ConstantString(self, cs: ConstantString) -> str:
+        return repr(cs.value)
+    
     def process_ZeroOrMore(self, q: ZeroOrMore) -> str:
         return self.process(q.expr) + "*"
     

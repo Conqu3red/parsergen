@@ -116,6 +116,14 @@ class GeneratedParser:
             return tok
         return None
     
+    @memoize
+    def expect_constant(self, value):
+        tok = self.peek_token()
+        if tok.value == value:
+            self.token_stream.pos += 1
+            return tok
+        return None
+    
     def peek_token(self):
         return self.token_stream.peek_token()
     

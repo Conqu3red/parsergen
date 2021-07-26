@@ -1,4 +1,3 @@
-from parsergen import *
 from parsergen.grammar_utils import *
 from parsergen.parsergen import *
 import unittest
@@ -7,7 +6,22 @@ def construct_parser(grammar: str) -> GeneratedParser:
     g = Generator()
     r = g.generate(grammar, display=False)
     exec(r, globals())
-    return CustomParser
+    return globals()[g.config["class_name"]]
+
+def load_metagram() -> GeneratedParser:
+    with open("parsergen/metagrammar.gram") as f:
+        pgram = f.read()
+
+    g = Generator()
+    gl = GrammarLexer()
+    parser_definition = parse_all(gl.lex_string(pgram))
+    rules = g.process_sections(parser_definition)
+    g.config["header"] = ""
+    r = g.generate_parser_class(rules)
+    
+    exec(r, globals())
+    return globals()[g.config["class_name"]]
+    
 
 class CalculatorTest(unittest.TestCase):
     def test_calculator(self):
@@ -77,12 +91,12 @@ class MetagrammarTest(unittest.TestCase):
         with open("parsergen/metagrammar.gram") as f:
             pgram = f.read()
 
-        new_parser = construct_parser(pgram)
+        new_parser = load_metagram()
 
         l = GrammarLexer()
         token_stream = TokenStream(l.lex_string(pgram))
         p = new_parser(token_stream)
-        result = p.statement_list()
+        result = p.parser_definition()
 
         expected = parse_all(l.lex_string(pgram))
 
@@ -93,8 +107,8 @@ class MetagrammarTest(unittest.TestCase):
         #print(format_grammar(post_process(expected)))
 
         self.assertEqual(
-            repr(post_process(result)),
-            repr(post_process(expected)), 
+            repr(result),
+            repr(expected), 
             "The grammar parser generated from the metagrammar behaves differently to the current parser."
         )
 

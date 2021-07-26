@@ -2,8 +2,7 @@
 from parsergen.parser_utils import GeneratedParser, TokenStream, Node, Filler
 from parsergen.parser_utils import memoize, memoize_left_rec
 from functools import reduce
-
-class CustomParser(GeneratedParser):
+class CalcParser(GeneratedParser):
     @memoize
     def start(self):
         pos = self.mark()

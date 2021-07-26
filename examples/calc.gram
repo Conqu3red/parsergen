@@ -1,3 +1,5 @@
+@class_name = 'CalcParser'
+
 start  :  e=expr EOF  { e };
 
 expr   :  left=expr ADD right=term   { left + right };

@@ -95,8 +95,10 @@ class NotPredicate(Predicate):
     def __init__(self, expr: Expr) -> None:
         self.expr = expr
 
+class Section(AST):
+    pass
 
-class Statement(object):
+class Statement(Section):
     def __init__(self, name: str, grammar: List[Expr], action=None) -> None:
         self.name = name
         self.grammar = grammar
@@ -105,7 +107,20 @@ class Statement(object):
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}(name={self.name!r}, grammar={self.grammar!r})"
 
+class ConfigurationCall(Section):
+    def __init__(self, name: str, value: str) -> None:
+        self.name = name
+        self.value = value
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}(name={self.name!r}, value={self.value!r})"
 
+class ParserDefinition(AST):
+    def __init__(self, sections: List[Section]) -> None:
+        self.sections = sections
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}(sections={self.sections!r})"
 
 
 class GrammarLexer(Lexer):
@@ -122,6 +137,7 @@ class GrammarLexer(Lexer):
     EQ        = r"="
     NOT       = r"!"
     AND       = r"&"
+    AT        = r"@"
     
     @token(r"\{([\s\S]+?)\}\s*;\s*(\n|$)")
     def ACTION(self, t):

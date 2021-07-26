@@ -9,6 +9,9 @@ class CustomParser(GeneratedParser):
     @memoize
     def statement_list(self):
         pos = self.mark()
+        """
+        s=statement* EOF { s };
+        """
         parts = []
         for _ in range(1):
             part = self._loop_0()
@@ -29,6 +32,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _loop_0(self):
+        """
+        statement*
+        """
         children = []
         while True:
             pos = self.mark()
@@ -41,6 +47,13 @@ class CustomParser(GeneratedParser):
     @memoize
     def statement(self):
         pos = self.mark()
+        """
+        n=(ID? COLON)? es=expr* a=ACTION? TERMINATE { Statement(
+            n[0].value if not isinstance(n, Filler) and not isinstance(n[0], Filler) else "<>", 
+            es, 
+            action=a.value if not isinstance(a, Filler) else None
+        ) };
+        """
         parts = []
         for _ in range(1):
             part = self._maybe_1()
@@ -77,12 +90,18 @@ class CustomParser(GeneratedParser):
         return None
         
     def _maybe_1(self):
+        """
+        (ID? COLON)?
+        """
         pos = self.mark()
         part = self._expr_list_4()
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     def _expr_list_4(self):
+        """
+        (ID? COLON)
+        """
         pos = self.mark()
         parts = []
         for _ in range(1):
@@ -100,12 +119,18 @@ class CustomParser(GeneratedParser):
         self.goto(pos)
         return None
     def _maybe_5(self):
+        """
+        ID?
+        """
         pos = self.mark()
         part = self.expect('ID')
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     def _loop_2(self):
+        """
+        expr*
+        """
         children = []
         while True:
             pos = self.mark()
@@ -116,6 +141,9 @@ class CustomParser(GeneratedParser):
                 break
         return children
     def _maybe_3(self):
+        """
+        ACTION?
+        """
         pos = self.mark()
         part = self.expect('ACTION')
         if self.match(part): return part
@@ -124,6 +152,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def expr_list(self):
         pos = self.mark()
+        """
+        es=expr* { ExprList(es) };
+        """
         parts = []
         for _ in range(1):
             part = self._loop_6()
@@ -139,6 +170,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _loop_6(self):
+        """
+        expr*
+        """
         children = []
         while True:
             pos = self.mark()
@@ -151,6 +185,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def expr(self):
         pos = self.mark()
+        """
+        name=(ID EQ)? v=or_op { NamedItem(name[0].value, v) if not isinstance(name, Filler) else v };
+        """
         parts = []
         for _ in range(1):
             part = self._maybe_7()
@@ -172,12 +209,18 @@ class CustomParser(GeneratedParser):
         return None
         
     def _maybe_7(self):
+        """
+        (ID EQ)?
+        """
         pos = self.mark()
         part = self._expr_list_8()
         if self.match(part): return part
         self.goto(pos)
         return Filler()
     def _expr_list_8(self):
+        """
+        (ID EQ)
+        """
         pos = self.mark()
         parts = []
         for _ in range(1):
@@ -197,6 +240,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def or_op(self):
         pos = self.mark()
+        """
+        v=star_op others=(OR star_op)* { OrOp(exprs=[v]+[o[1] for o in others]) if len(others) > 0 else v };
+        """
         parts = []
         for _ in range(1):
             part = self.star_op()
@@ -218,6 +264,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _loop_9(self):
+        """
+        (OR star_op)*
+        """
         children = []
         while True:
             pos = self.mark()
@@ -228,6 +277,9 @@ class CustomParser(GeneratedParser):
                 break
         return children
     def _expr_list_10(self):
+        """
+        (OR star_op)
+        """
         pos = self.mark()
         parts = []
         for _ in range(1):
@@ -247,6 +299,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def star_op(self):
         pos = self.mark()
+        """
+        v=plus_op s=STAR? { ZeroOrMore(v) if not isinstance(s, Filler) else v };
+        """
         parts = []
         for _ in range(1):
             part = self.plus_op()
@@ -268,6 +323,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _maybe_11(self):
+        """
+        STAR?
+        """
         pos = self.mark()
         part = self.expect('STAR')
         if self.match(part): return part
@@ -276,6 +334,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def plus_op(self):
         pos = self.mark()
+        """
+        v=qmark_op s=PLUS? { OneOrMore(v) if not isinstance(s, Filler) else v };
+        """
         parts = []
         for _ in range(1):
             part = self.qmark_op()
@@ -297,6 +358,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _maybe_12(self):
+        """
+        PLUS?
+        """
         pos = self.mark()
         part = self.expect('PLUS')
         if self.match(part): return part
@@ -305,6 +369,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def qmark_op(self):
         pos = self.mark()
+        """
+        v=term s=QMARK? { ZeroOrOne(v) if not isinstance(s, Filler) else v };
+        """
         parts = []
         for _ in range(1):
             part = self.term()
@@ -326,6 +393,9 @@ class CustomParser(GeneratedParser):
         return None
         
     def _maybe_13(self):
+        """
+        QMARK?
+        """
         pos = self.mark()
         part = self.expect('QMARK')
         if self.match(part): return part
@@ -334,6 +404,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def term(self):
         pos = self.mark()
+        """
+        AND f=factor { AndPredicate(f) };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('AND')
@@ -351,6 +424,9 @@ class CustomParser(GeneratedParser):
             return AndPredicate(f)
         self.goto(pos)
         
+        """
+        NOT f=factor { NotPredicate(f) };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('NOT')
@@ -368,6 +444,9 @@ class CustomParser(GeneratedParser):
             return NotPredicate(f)
         self.goto(pos)
         
+        """
+        f=factor { f };
+        """
         parts = []
         for _ in range(1):
             part = self.factor()
@@ -385,6 +464,9 @@ class CustomParser(GeneratedParser):
     @memoize_left_rec
     def factor(self):
         pos = self.mark()
+        """
+        i=item { i };
+        """
         parts = []
         for _ in range(1):
             part = self.item()
@@ -397,6 +479,9 @@ class CustomParser(GeneratedParser):
             return i
         self.goto(pos)
         
+        """
+        LPAREN es=expr_list RPAREN { es };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('LPAREN')
@@ -424,6 +509,9 @@ class CustomParser(GeneratedParser):
     @memoize
     def item(self):
         pos = self.mark()
+        """
+        i=ID { StatementPointer(i.value) };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('ID')
@@ -436,6 +524,9 @@ class CustomParser(GeneratedParser):
             return StatementPointer(i.value)
         self.goto(pos)
         
+        """
+        i=TOKEN { TokenPointer(i.value) };
+        """
         parts = []
         for _ in range(1):
             part = self.expect('TOKEN')

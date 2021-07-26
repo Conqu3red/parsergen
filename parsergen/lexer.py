@@ -6,20 +6,26 @@ from .utils import *
 import itertools
 
 class Token(object):
-    def __init__(self, type, value, lineno=0, column=0):
+    def __init__(self, type: str, value, lineno=0, column=0):
         self.type = type
         self.value = value
         self.lineno = lineno
         self.column = column
     
     def __str__(self):
-        return f"<Token(type={self.type!r}, value={self.value!r}, lineno={self.lineno}, column={self.column})>"
+        return f"Token(type={self.type!r}, value={self.value!r}, lineno={self.lineno}, column={self.column})"
     
     def __repr__(self):
         return self.__str__()
     
     def error_format(self):
         return f"'{self.value}' ({self.type})"
+    
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, Token):
+            return self.type == o.type and self.value == o.value and self.pos == o.pos
+        
+        return False
     
     @property
     def pos(self):
@@ -87,6 +93,21 @@ class LexerMeta(RequiredAttributes("ignore")):
     def tokens(cls):
         return tuple(cls._rules.keys())
 
+
+class LexError(Exception):
+    def __init__(self, msg, lineno, column, lineText=""):
+        self.msg = msg
+        self.lineno = lineno
+        self.column = column
+        self.lineText = lineText
+    
+    def __str__(self):
+        ret = f"\n  Line {self.lineno}:\n"
+        if self.lineText:
+            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
+        return ret + f"{self.msg}"
+
+
 # need to modify lexer to accept the new Rule objects
 # modify documentation
 # add other support?
@@ -140,7 +161,10 @@ class Lexer(metaclass=LexerMeta):
                     if rule.modifier:
                         rv = rule.modifier(self, rv)
                     return rv if not token_name.startswith("ignore_") else None
-        raise Exception(f"Found Unexpected character '{self.source[0]}' while tokenizing!")
+        raise LexError(
+            f"Found Unexpected character '{self.source[0]}' while tokenizing!",
+            self.lineno, self.column, self.current_line + self.source[0]
+        )
         
 
     def lex_string(self, source: str) -> LexerResult:

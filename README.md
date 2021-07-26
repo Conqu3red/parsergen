@@ -196,10 +196,7 @@ print(get_grammar(CalcParser))
 
 
 # Implementation details
-The grammar rules currently support most of the PEG parsing [syntax](https://en.wikipedia.org/wiki/Parsing_expression_grammar#Syntax).
-The only rules not supported are:
-- And-predicate: `&e`
-- Not-predicate: `!e`
+The grammar rules currently support all of the PEG parsing [syntax](https://en.wikipedia.org/wiki/Parsing_expression_grammar#Syntax).
 
 The simple calculator described implementes grammar similar to the rules seen [here](https://en.wikipedia.org/wiki/Parsing_expression_grammar#Examples)
 

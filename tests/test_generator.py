@@ -1,89 +1,111 @@
 from parsergen import *
+from parsergen.grammar_utils import *
 from parsergen.parsergen import *
+import unittest
 
-### calc test ###
-g = Generator()
-r = g.generate("""
-expr  : left=expr PLUS  right=term { left + right };
-      : left=expr MINUS right=term { left - right };
-      : p=term { p };
-term  : p=N { float(p.value) };
-""")
-print(r)
-exec(r)
+def construct_parser(grammar: str) -> GeneratedParser:
+    g = Generator()
+    r = g.generate(grammar, display=False)
+    exec(r, globals())
+    return CustomParser
 
-t = CustomParser(TokenStream([
-    Token("N", "1"), Token("PLUS", "+"), Token("N", "2"), Token("MINUS", "-"), Token("N", "3")
-]))
-res = t.expr()
-assert res == 0.0
-print(res)
+class CalculatorTest(unittest.TestCase):
+    def test_calculator(self):
+        p = construct_parser("""
+        expr  : left=expr PLUS  right=term { left + right };
+              : left=expr MINUS right=term { left - right };
+              : p=term { p };
+        term  : p=N { float(p.value) };
+        """)
+        t = p(TokenStream([
+            Token("N", "1"), Token("PLUS", "+"), Token("N", "2"), Token("MINUS", "-"), Token("N", "3")
+        ]))
+        res = t.expr()
+        self.assertEqual(res, 0.0)
 
+class AdvancedExpressionTest(unittest.TestCase):
+    def test_generate(self):
+        p = construct_parser("""
+        expr  : (A B|C|D)+ EOF;
+        """)
 
+        t = p(TokenStream([
+            Token(char, "") for char in "AB AC AD" if char != " "
+        ]))
+        
+        expr = t.expr()
+        target = Node(
+            'expr', 
+            [
+                [
+                    [Token(type='A', value='', lineno=0, column=0), Token(type='B', value='', lineno=0, column=0)],
+                    [Token(type='A', value='', lineno=0, column=0), Token(type='C', value='', lineno=0, column=0)],
+                    [Token(type='A', value='', lineno=0, column=0), Token(type='D', value='', lineno=0, column=0)],
+                ],
+                Token(type='EOF', value='<EOF>', lineno=0, column=1),
+            ],
+        )
+        self.assertEqual(
+            expr,
+            target
+        )
+    
+    def test_predicate(self):
+        p = construct_parser("""
+        expr  : (A B !C) EOF;
+        """)
+        t = p(TokenStream([Token(char, "") for char in "A B C" if char != " "]))
+        self.assertIsNone(t.expr())
+        
+        t = p(TokenStream([Token(char, "") for char in "A B" if char != " "]))
+        self.assertEqual(
+            t.expr(),
+            Node(
+                'expr',
+                [
+                    [
+                        Token(type='A', value='', lineno=0, column=0),
+                        Token(type='B', value='', lineno=0, column=0),
+                    ],
+                    Token(type='EOF', value='<EOF>', lineno=0, column=1)
+                ]
+            )
+        )
 
-### advanced expression test ###
-g = Generator()
-r = g.generate("""
-expr  : (A B|C|D)+ EOF;
-""")
-print(r)
-exec(r)
-t = CustomParser(TokenStream([
-    Token(char, "") for char in "AB AC AD" if char != " "
-]))
-print(t.expr())
+class MetagrammarTest(unittest.TestCase):
+    def test_metagrammar(self):
+        with open("parsergen/metagrammar.gram") as f:
+            pgram = f.read()
 
+        new_parser = construct_parser(pgram)
 
-### metagrammar test ###
-g = Generator()
-with open("parsergen/metagrammar.gram") as f:
-    pgram = f.read()
+        l = GrammarLexer()
+        token_stream = TokenStream(l.lex_string(pgram))
+        p = new_parser(token_stream)
+        result = p.statement_list()
 
-r = g.generate(pgram)
-print(r)
-exec(r)
+        expected = parse_all(l.lex_string(pgram))
 
-l = GrammarLexer()
-token_stream = TokenStream(l.lex_string(pgram)) #broken?
-p = CustomParser(token_stream)
-result = p.statement_list()
+        #print(result)
+        #print(format_grammar(post_process(result)))
 
-expected = parse_all(l.lex_string(pgram))
+        #print(expected)
+        #print(format_grammar(post_process(expected)))
 
-#print(result)
-print(format_grammar(post_process(result)))
+        self.assertEqual(
+            repr(post_process(result)),
+            repr(post_process(expected)), 
+            "The grammar parser generated from the metagrammar behaves differently to the current parser."
+        )
 
-#print(expected)
-print(format_grammar(post_process(expected)))
-
-assert repr(post_process(result)) == repr(post_process(expected))
-#print(token_stream.peek_token())
-
-
-
-
-### ERROR TEST ###
-g = Generator()
-r = g.generate("""
-expr  : (A B C D) | (A B A D) EOF;
-""")
-print(r)
-exec(r)
-t = CustomParser(TokenStream([
-    Token(char, "") for char in "A B E D" if char != " "
-]))
-print(t.expr())
-print(t.error_pos, t.error())
-
-
-### predicates
-g = Generator()
-r = g.generate("""
-expr  : (A B !C) EOF;
-""")
-print(r)
-exec(r)
-t = CustomParser(TokenStream([Token(char, "") for char in "A B C" if char != " "]))
-print(t.expr())
-t = CustomParser(TokenStream([Token(char, "") for char in "A B" if char != " "]))
-print(t.expr())
+class ErrorTest(unittest.TestCase):
+    def test_error(self):
+        p = construct_parser("""
+        expr  : (A B C D) | (A B A D) EOF;
+        """)
+        t = p(TokenStream([
+            Token(char, "") for char in "A B E D" if char != " "
+        ]))
+        self.assertIsNone(t.expr())
+        self.assertEqual(t.error_pos, 2)
+        self.assertIsInstance(t.error(), ParseError)

@@ -11,6 +11,12 @@ class Node:
         self.type = type
         self.children = children
     
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, Node):
+            return self.type == o.type and self.children == o.children
+        
+        return False
+    
     def __repr__(self) -> str:
         return f"Node({self.type!r}, {self.children!r})"
 

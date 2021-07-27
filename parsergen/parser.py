@@ -1,25 +1,4 @@
-"""Parses grammar expressions and performs pattern matching
-
-Tokens:
-    ID      :   [a-z0-9_]+
-    TOKEN   :   [A-Z0-9_]+
-
-
-Grammar:
-
-statement_list : statement* EOF;
-statement      :  (ID? COLON)? expr*;
-expr_list      :  expr*;
-expr           :  (ID EQ)? prec4;
-prec4          :  prec3 (OR prec3)*;
-prec3          :  prec2 STAR?;
-prec2          :  prec1 PLUS?;
-prec1          :  factor QMARK?;
-
-factor         :  LPAREN expr_list RPAREN;
-               :  item;
-item           :  ID | TOKEN;
-"""
+"""Parses grammar expressions and performs pattern matching"""
 from .lexer import *
 from .utils import *
 from typing import *
@@ -59,11 +38,6 @@ def post_process(rules_list: List[Statement]) -> Dict[str, List[Statement]]:
     return rules
 
 
-class StatementAndTarget(NamedTuple):
-    statement: Statement
-    function: Any
-
-
 class GrammarPrinter:
     def __init__(self, _grammar) -> None:
         self._grammar = _grammar
@@ -72,9 +46,6 @@ class GrammarPrinter:
         target = f"process_{ast.__class__.__qualname__}"
         r = getattr(self, target)(ast)
         return r
-
-    def process_StatementAndTarget(self, ast: StatementAndTarget) -> str:
-        return self.process(ast.statement)
     
     def process_Statement(self, statement: Statement) -> str:
         rv = ""

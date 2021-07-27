@@ -106,7 +106,7 @@ class CalcLexer(Lexer):
 
 while True:
     expr = input("> ")
-        lexer_result = CalcLexer().lex_string(expr) # get LexerResult from input
+    lexer_result = CalcLexer().lex_string(expr) # get LexerResult from input
     stream = TokenStream(lexer_result) # create token stream
     parser = CalcParser(stream)
     result = parser.start()

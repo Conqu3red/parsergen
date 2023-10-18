@@ -1,5 +1,5 @@
 from typing import Optional
-from .lexer import TokenStream
+from .lexer import TokenStream, Pos
 from functools import wraps
 
 class Filler:
@@ -65,16 +65,16 @@ def memoize_left_rec(func):
 
 
 class ParseError(Exception):
-    def __init__(self, msg, lineno, column, lineText=""):
+    def __init__(self, msg, start: Pos, end: Pos, lineText=""):
         self.msg = msg
-        self.lineno = lineno
-        self.column = column
+        self.start = start
+        self.end = end
         self.lineText = lineText
     
     def __str__(self):
         ret = f"\n  Line {self.lineno}:\n"
         if self.lineText:
-            ret += f"  {self.lineText}\n  {' '*(self.column-1)}^\n"
+            ret += f"  {self.lineText}\n  {' '*(self.start.col-1)}{'^' * (self.end.col - self.start.col)}\n"
         return ret + f"{self.msg}"
 
 
@@ -98,8 +98,9 @@ class GeneratedParser:
         number_of_lines = len(self.token_stream.lines)
         return ParseError(
             f"Unexpected token {tok.error_format()}", 
-            *tok.pos,
-            lineText=self.token_stream.lines[tok.lineno-1] if tok.lineno-1 < number_of_lines and number_of_lines else ""
+            tok.start,
+            tok.end,
+            lineText=self.token_stream.lines[tok.start.lineno-1] if tok.start.lineno-1 < number_of_lines and number_of_lines else ""
         )
     
     def mark(self):

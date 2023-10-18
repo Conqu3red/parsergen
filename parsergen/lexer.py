@@ -5,15 +5,19 @@ import re
 from .utils import *
 import itertools
 
+class Pos(NamedTuple):
+    lineno: int
+    col: int
+
 class Token(object):
-    def __init__(self, type: str, value, lineno=0, column=0):
+    def __init__(self, type: str, value, start: Optional[Pos] = None, end: Optional[Pos] = None):
         self.type = type
         self.value = value
-        self.lineno = lineno
-        self.column = column
+        self.start = start or Pos(0, 0)
+        self.end = end or Pos(0, 0)
     
     def __str__(self):
-        return f"Token(type={self.type!r}, value={self.value!r}, lineno={self.lineno}, column={self.column})"
+        return f"Token(type={self.type!r}, value={self.value!r}, start={self.start}, end={self.end})"
     
     def __repr__(self):
         return self.__str__()
@@ -23,13 +27,9 @@ class Token(object):
     
     def __eq__(self, o: object) -> bool:
         if isinstance(o, Token):
-            return self.type == o.type and self.value == o.value and self.pos == o.pos
+            return self.type == o.type and self.value == o.value and self.start == o.start and self.end == o.end
         
         return False
-    
-    @property
-    def pos(self):
-        return self.lineno, self.column
 
 @dataclass
 class LexerResult:
@@ -142,7 +142,7 @@ class Lexer(metaclass=LexerMeta):
     def Token(self, tokenType, value):
         token = Token(
             tokenType, value,
-            lineno=self.lineno, column=self.column
+            Pos(self.lineno, self.column - len(value)), Pos(self.lineno, self.column - 1)
         )
         return token
     
@@ -208,11 +208,11 @@ class TokenStream:
     
     def peek_token(self):
         if self.pos >= len(self.tokens):
-            eof_pos = (0, 0)
+            eof_pos = Pos(0, 0)
             if len(self.tokens) > 0:
-                eof_pos = list(self.tokens[-1].pos)
-                eof_pos[1] += 1
-            return Token("EOF", "<EOF>", *eof_pos)
+                eof_pos = self.tokens[-1].end
+                eof_pos = Pos(eof_pos.lineno, eof_pos.col + 1)
+            return Token("EOF", "<EOF>", start=eof_pos, end=eof_pos)
         return self.tokens[self.pos]
     
     def fetch(self, pos):

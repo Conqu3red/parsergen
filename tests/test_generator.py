@@ -52,11 +52,11 @@ class AdvancedExpressionTest(unittest.TestCase):
             'expr', 
             [
                 [
-                    [Token(type='A', value='', lineno=0, column=0), Token(type='B', value='', lineno=0, column=0)],
-                    [Token(type='A', value='', lineno=0, column=0), Token(type='C', value='', lineno=0, column=0)],
-                    [Token(type='A', value='', lineno=0, column=0), Token(type='D', value='', lineno=0, column=0)],
+                    [Token(type='A', value=''), Token(type='B', value='')],
+                    [Token(type='A', value=''), Token(type='C', value='')],
+                    [Token(type='A', value=''), Token(type='D', value='')],
                 ],
-                Token(type='EOF', value='<EOF>', lineno=0, column=1),
+                Token(type='EOF', value='<EOF>', start=Pos(0, 1), end=Pos(0, 1)),
             ],
         )
         self.assertEqual(
@@ -78,10 +78,10 @@ class AdvancedExpressionTest(unittest.TestCase):
                 'expr',
                 [
                     [
-                        Token(type='A', value='', lineno=0, column=0),
-                        Token(type='B', value='', lineno=0, column=0),
+                        Token(type='A', value=''),
+                        Token(type='B', value=''),
                     ],
-                    Token(type='EOF', value='<EOF>', lineno=0, column=1)
+                    Token(type='EOF', value='<EOF>', start=Pos(0, 1), end=Pos(0, 1))
                 ]
             )
         )

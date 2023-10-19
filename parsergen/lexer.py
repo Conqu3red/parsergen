@@ -142,7 +142,7 @@ class Lexer(metaclass=LexerMeta):
     def Token(self, tokenType, value):
         token = Token(
             tokenType, value,
-            Pos(self.lineno, self.column - len(value)), Pos(self.lineno, self.column - 1)
+            Pos(self.lineno, self.column - len(value)), Pos(self.lineno, self.column)
         )
         return token
     

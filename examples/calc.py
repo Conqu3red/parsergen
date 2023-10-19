@@ -1,5 +1,5 @@
 from calc_parser import CalcParser
-from parsergen import Lexer, Token, token
+from parsergen.lexer import Lexer, Token, token
 from parsergen.parser_utils import TokenStream
 
 class CalcLexer(Lexer):

@@ -72,9 +72,9 @@ class ParseError(Exception):
         self.lineText = lineText
     
     def __str__(self):
-        ret = f"\n  Line {self.lineno}:\n"
+        ret = f"\n  Line {self.start.lineno}:\n"
         if self.lineText:
-            ret += f"  {self.lineText}\n  {' '*(self.start.col-1)}{'^' * (self.end.col - self.start.col)}\n"
+            ret += f"  {self.lineText}\n  {' '*(self.start.col)}{'^' * (self.end.col - self.start.col)}\n"
         return ret + f"{self.msg}"
 
 
